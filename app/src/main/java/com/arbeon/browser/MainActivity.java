@@ -234,6 +234,7 @@ public class MainActivity extends Activity {
         ap.setMargins(dp(2), 0, dp(2), 0);
         bar.addView(address, ap);
         bar.addView(btnStar, new LinearLayout.LayoutParams(dp(40), dp(44)));
+        bar.addView(new DownloadIconView(this, v -> DownloadsUi.show(this)), new LinearLayout.LayoutParams(dp(36), dp(44)));
         bar.addView(btnMenu, new LinearLayout.LayoutParams(dp(36), dp(44)));
         root.addView(bar, new LinearLayout.LayoutParams(MATCH, dp(48)));
 
@@ -690,6 +691,8 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ menu e configurações
 
     private void showMenu(View anchor) {
+        AppMenu.show(this, new Runnable[]{() -> newTab(null), this::showBookmarks, this::showSettings, this::sharePage, () -> DownloadsUi.show(this)});
+        if (true) return;
         PopupMenu m = new PopupMenu(this, anchor);
         m.getMenu().add(0, 1, 0, "Nova guia");
         m.getMenu().add(0, 2, 1, "Favoritos");
