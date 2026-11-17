@@ -1,0 +1,36 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# gitpush — envia o projeto Arbeon para o GitHub (Termux)
+#
+#   Instalar o comando:   bash gitpush --install
+#   Usar (na pasta do projeto):
+#       gitpush                  -> commit com data/hora
+#       gitpush "minha mensagem" -> commit com sua mensagem
+
+REPO_URL="https://github.com/hackproff23-max/Arbeon.git"
+BRANCH="main"
+
+if [ "$1" = "--install" ]; then
+  DEST="${PREFIX:-/usr}/bin/gitpush"
+  cp "$0" "$DEST" && chmod +x "$DEST" \
+    && echo "Instalado! Agora use: gitpush \"mensagem\" dentro da pasta do projeto." \
+    || echo "Falha ao instalar."
+  exit 0
+fi
+
+command -v git >/dev/null 2>&1 || { echo "Instale o git primeiro: pkg install git"; exit 1; }
+
+MSG="${1:-Atualização $(date '+%d/%m/%Y %H:%M')}"
+
+[ -d .git ] || git init -b "$BRANCH"
+git remote get-url origin >/dev/null 2>&1 || git remote add origin "$REPO_URL"
+git config user.name  >/dev/null 2>&1 || git config user.name  "hackproff23-max"
+git config user.email >/dev/null 2>&1 || git config user.email "hackproff23-max@users.noreply.github.com"
+
+git add -A
+git commit -m "$MSG" || echo "(nada novo para commitar)"
+git branch -M "$BRANCH"
+git push -u origin "$BRANCH"
+
+echo
+echo "Pronto! O GitHub vai compilar o APK em: Actions -> Build APK"
+echo "Depois baixe em: Releases -> Arbeon.apk"
