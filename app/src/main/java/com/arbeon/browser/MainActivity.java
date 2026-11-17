@@ -588,23 +588,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        w.setDownloadListener((url, ua, cd, mime, len) -> {
-            try {
-                DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
-                r.setMimeType(mime);
-                r.addRequestHeader("User-Agent", ua);
-                String cookie = CookieManager.getInstance().getCookie(url);
-                if (cookie != null) r.addRequestHeader("Cookie", cookie);
-                r.setNotificationVisibility(
-                        DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,
-                        URLUtil.guessFileName(url, cd, mime));
-                ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(r);
-                toast("Baixando arquivo…");
-            } catch (Exception e) {
-                toast("Não foi possível baixar este arquivo");
-            }
-        });
+        w.setDownloadListener((url, ua, cd, mime, len) -> DownloadsUi.onDownloadRequested(MainActivity.this, url, ua, cd, mime, len));
         return w;
     }
 
@@ -711,6 +695,7 @@ public class MainActivity extends Activity {
         m.getMenu().add(0, 2, 1, "Favoritos");
         m.getMenu().add(0, 3, 2, "Configurações");
         m.getMenu().add(0, 4, 3, "Compartilhar página");
+        m.getMenu().add(0, 5, 4, "Downloads");
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -721,6 +706,9 @@ public class MainActivity extends Activity {
                     break;
                 case 3:
                     showSettings();
+                    break;
+                case 5:
+                    DownloadsUi.show(MainActivity.this);
                     break;
                 case 4:
                     sharePage();
