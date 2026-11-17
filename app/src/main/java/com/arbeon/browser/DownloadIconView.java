@@ -7,7 +7,8 @@ import android.graphics.Path;
 import android.util.TypedValue;
 import android.view.View;
 
-/** Ícone de download (seta + bandeja) para a barra de endereço. Fica azul com bolinha quando há download ativo. */
+/** Ícone de pasta com seta de download, do mesmo tamanho dos outros botões da barra.
+ *  Fica azul com uma bolinha quando há download ativo. */
 final class DownloadIconView extends View {
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -42,27 +43,37 @@ final class DownloadIconView extends View {
     protected void onDraw(Canvas c) {
         super.onDraw(c);
         boolean active = anyRunning();
-        float w = getWidth(), h = getHeight();
-        float s = Math.min(w, h) * 0.30f;
-        float cx = w / 2f, cy = h / 2f;
-        p.setStrokeWidth(s * 0.24f);
+        float box = 22f * getResources().getDisplayMetrics().density; // mesmo porte dos ícones de 22sp
+        float hx = box * 0.5f, hy = box * 0.42f;
+        float cx = getWidth() / 2f, cy = getHeight() / 2f;
+        float x1 = cx - hx, x2 = cx + hx;
+        float yTop = cy - hy, y1 = cy - hy * 0.55f, y2 = cy + hy;
+
+        p.setStrokeWidth(box * 0.085f);
         p.setColor(active ? 0xFF1A73E8 : 0xFF5F6368);
 
-        // seta
+        // pasta
         path.reset();
-        path.moveTo(cx, cy - s * 0.95f);
-        path.lineTo(cx, cy + s * 0.35f);
-        path.moveTo(cx - s * 0.55f, cy - s * 0.2f);
-        path.lineTo(cx, cy + s * 0.35f);
-        path.lineTo(cx + s * 0.55f, cy - s * 0.2f);
-        // bandeja
-        path.moveTo(cx - s * 0.95f, cy + s * 0.3f);
-        path.lineTo(cx - s * 0.95f, cy + s * 0.95f);
-        path.lineTo(cx + s * 0.95f, cy + s * 0.95f);
-        path.lineTo(cx + s * 0.95f, cy + s * 0.3f);
+        path.moveTo(x1, y2);
+        path.lineTo(x1, yTop);
+        path.lineTo(cx - hx * 0.2f, yTop);
+        path.lineTo(cx + hx * 0.05f, y1);
+        path.lineTo(x2, y1);
+        path.lineTo(x2, y2);
+        path.close();
         c.drawPath(path, p);
 
-        if (active) c.drawCircle(cx + s * 0.95f, cy - s * 0.85f, s * 0.3f, dot);
+        // seta de download dentro da pasta
+        float a0 = y1 + (y2 - y1) * 0.22f, a1 = y2 - (y2 - y1) * 0.22f, k = hx * 0.3f;
+        path.reset();
+        path.moveTo(cx, a0);
+        path.lineTo(cx, a1);
+        path.moveTo(cx - k, a1 - k);
+        path.lineTo(cx, a1);
+        path.lineTo(cx + k, a1 - k);
+        c.drawPath(path, p);
+
+        if (active) c.drawCircle(x2, yTop, box * 0.13f, dot);
         postInvalidateDelayed(800);
     }
 }
