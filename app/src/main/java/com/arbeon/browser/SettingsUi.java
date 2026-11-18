@@ -238,19 +238,6 @@ final class SettingsUi {
         return list;
     }
 
-    private void showPrivacy() {
-        LinearLayout list = beginSub("Privacidade e segurança");
-        list.addView(note("Apague cookies, cache, histórico e dados de sites de todas as guias."), rowLp(4));
-        LinearLayout r = pillRow(SIcon.TRASH, "Excluir dados de navegação", null);
-        r.addView(chevron(), new LinearLayout.LayoutParams(dp(24), dp(24)));
-        r.setOnClickListener(v -> new ArbeonDialog(a)
-                .setTitle("Excluir dados de navegação?")
-                .setMessage("Cookies, cache, histórico e dados de sites serão apagados.")
-                .setPositiveButton("Excluir", (dd, ww) -> clear.run())
-                .setNegativeButton("Cancelar", null)
-                .show());
-        list.addView(r, rowLp(12));
-    }
 
     // ---- Aparência: cores do tema
 
@@ -315,6 +302,11 @@ final class SettingsUi {
             modes.addView(t, mp);
         }
         list.addView(modes, lp(MATCH, 0, 0));
+
+        // ---- barra de endereço: em cima ou embaixo
+        addSection(list, "Barra de endereço");
+        addChoice(list, SIcon.BAR, "Posição", "bar_pos", new String[]{"Parte de cima", "Parte de baixo"}, 0,
+                this::showAppearance, true);
 
         // ---- prévia
         LinearLayout prev = new LinearLayout(a);
@@ -466,11 +458,65 @@ final class SettingsUi {
         }
     }
 
+
+    private void addSection(LinearLayout list, String text) {
+        list.addView(sectionLabel(text), sectionLp());
+    }
+
+    /** Linha com valor atual (ex.: "Perguntar primeiro"); ao tocar abre uma lista para escolher. */
+    private void addChoice(LinearLayout list, int icon, final String label, final String key,
+                           final String[] opts, int def, final Runnable refresh, final boolean recreate) {
+        final int cur = Math.max(0, Math.min(opts.length - 1, prefs.getInt(key, def)));
+        LinearLayout r = pillRow(icon, label, opts[cur]);
+        r.addView(chevron(), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        r.setOnClickListener(v -> new ArbeonDialog(a)
+                .setTitle(label)
+                .setSingleChoiceItems(opts, cur, (dd, w) -> {
+                    prefs.edit().putInt(key, w).apply();
+                    if (recreate) themeChanged = true;
+                    else changed = true;
+                    dd.dismiss();
+                    refresh.run();
+                })
+                .show());
+        list.addView(r, rowLp(12));
+    }
+
+    private void showPrivacy() {
+        LinearLayout list = beginSub("Privacidade e segurança");
+        addSection(list, "Privacidade");
+        LinearLayout r = pillRow(SIcon.TRASH, "Excluir dados de navegação", "Histórico, cookies, dados de sites e cache");
+        r.addView(chevron(), new LinearLayout.LayoutParams(dp(24), dp(24)));
+        r.setOnClickListener(v -> new ArbeonDialog(a)
+                .setTitle("Excluir dados de navegação?")
+                .setMessage("Cookies, cache, histórico e dados de sites serão apagados.")
+                .setPositiveButton("Excluir", (dd, ww) -> clear.run())
+                .setNegativeButton("Cancelar", null)
+                .show());
+        list.addView(r, rowLp(12));
+        addToggle(list, SIcon.COOKIE, "Cookies de terceiros", "Deixa sites de terceiros salvarem cookies", "tp_cookies", true);
+
+        addSection(list, "Segurança");
+        addToggle(list, SIcon.SHIELD_CHECK, "Navegação Segura", "Avisa sobre sites perigosos", "safe_browsing", true);
+        addToggle(list, SIcon.SHIELD_LOCK, "Sempre usar conexões seguras", "Troca http por https quando possível", "https_only", false);
+    }
+
     private void showSites() {
         LinearLayout list = beginSub("Configurações de sites");
-        addToggle(list, SIcon.SLIDERS, "Ativar JavaScript", "Necessário para a maioria dos sites", "js", true);
-        addToggle(list, SIcon.MONITOR, "Modo desktop", "Pede a versão para computador dos sites", "desktop", false);
-        list.addView(note("As alterações são aplicadas às guias abertas quando você sair daqui."), rowLp(16));
+        addToggle(list, SIcon.SLIDERS, "JavaScript", "Necessário para a maioria dos sites", "js", true);
+        addToggle(list, SIcon.MONITOR, "Site para computador", "Pede a versão para computador dos sites", "desktop", false);
+
+        addSection(list, "Permissões");
+        String[] perm = {"Perguntar primeiro", "Bloqueado"};
+        Runnable again = this::showSites;
+        addChoice(list, SIcon.LOCATION, "Local", "perm_geo", perm, 0, again, false);
+        addChoice(list, SIcon.CAMERA, "Câmera", "perm_cam", perm, 0, again, false);
+        addChoice(list, SIcon.MIC, "Microfone", "perm_mic", perm, 0, again, false);
+
+        addSection(list, "Conteúdo");
+        addToggle(list, SIcon.IMAGE, "Imagens", "Mostrar imagens nas páginas", "images", true);
+        addToggle(list, SIcon.WINDOW, "Pop-ups e redirecionamentos", "Deixa sites abrirem novas janelas", "popups", false);
+        addToggle(list, SIcon.PLAY, "Reprodução automática", "Deixa vídeos e áudios começarem sozinhos", "autoplay", false);
     }
 
     private void showAbout() {

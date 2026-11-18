@@ -11,7 +11,9 @@ import android.view.View;
 /** Ícones preenchidos da tela de Configurações, desenhados no código (sem imagens). */
 final class SIcon extends View {
     static final int SHIELD_LOCK = 0, COMPASS = 1, GEAR = 2, BELL = 3, ACCESS = 4, CHEVRON = 5,
-            HELP = 6, SLIDERS = 7, MONITOR = 8, TRASH = 9, INFO = 10, PALETTE = 11;
+            HELP = 6, SLIDERS = 7, MONITOR = 8, TRASH = 9, INFO = 10, PALETTE = 11,
+            LOCATION = 12, CAMERA = 13, MIC = 14, IMAGE = 15, WINDOW = 16, COOKIE = 17,
+            PLAY = 18, BAR = 19, SHIELD_CHECK = 20;
 
     private final int type;
     private final int color;
@@ -53,6 +55,7 @@ final class SIcon extends View {
 
         switch (type) {
             case SHIELD_LOCK:
+            case SHIELD_CHECK:
                 path.reset();
                 path.moveTo(12 * u, 2.2f * u);
                 path.lineTo(20 * u, 5.2f * u);
@@ -62,6 +65,15 @@ final class SIcon extends View {
                 path.lineTo(4 * u, 5.2f * u);
                 path.close();
                 c.drawPath(path, f);
+                if (type == SHIELD_CHECK) {
+                    wp.setStrokeWidth(2f * u);
+                    path.reset();
+                    path.moveTo(8f * u, 12.2f * u);
+                    path.lineTo(11f * u, 15.2f * u);
+                    path.lineTo(16.2f * u, 9.2f * u);
+                    c.drawPath(path, wp);
+                    break;
+                }
                 rect.set(8.6f * u, 11f * u, 15.4f * u, 16.2f * u);
                 c.drawRoundRect(rect, 1.2f * u, 1.2f * u, w);
                 wp.setStrokeWidth(1.5f * u);
@@ -165,6 +177,78 @@ final class SIcon extends View {
                 c.drawCircle(15.4f * u, 7.2f * u, 1.7f * u, w);
                 c.drawCircle(18f * u, 11.6f * u, 1.7f * u, w);
                 c.drawCircle(15.6f * u, 17.2f * u, 3f * u, w);
+                break;
+            case LOCATION:
+                c.drawCircle(12 * u, 9.5f * u, 6.6f * u, f);
+                path.reset();
+                path.moveTo(6.2f * u, 12.6f * u);
+                path.lineTo(12 * u, 22 * u);
+                path.lineTo(17.8f * u, 12.6f * u);
+                path.close();
+                c.drawPath(path, f);
+                c.drawCircle(12 * u, 9.5f * u, 2.5f * u, w);
+                break;
+            case CAMERA:
+                rect.set(2.5f * u, 6.5f * u, 15.5f * u, 17.5f * u);
+                c.drawRoundRect(rect, 2.6f * u, 2.6f * u, f);
+                path.reset();
+                path.moveTo(16.8f * u, 10.4f * u);
+                path.lineTo(21.5f * u, 7.2f * u);
+                path.lineTo(21.5f * u, 16.8f * u);
+                path.lineTo(16.8f * u, 13.6f * u);
+                path.close();
+                c.drawPath(path, f);
+                break;
+            case MIC:
+                rect.set(8.8f * u, 2.8f * u, 15.2f * u, 14.2f * u);
+                c.drawRoundRect(rect, 3.2f * u, 3.2f * u, f);
+                p.setStrokeWidth(2.2f * u);
+                rect.set(5.8f * u, 6.4f * u, 18.2f * u, 18.2f * u);
+                c.drawArc(rect, 0, 180, false, p);
+                c.drawLine(12 * u, 18.2f * u, 12 * u, 21.5f * u, p);
+                c.drawLine(8.6f * u, 21.5f * u, 15.4f * u, 21.5f * u, p);
+                break;
+            case IMAGE:
+                rect.set(3.5f * u, 4.5f * u, 20.5f * u, 19.5f * u);
+                c.drawRoundRect(rect, 3f * u, 3f * u, p);
+                c.drawCircle(9f * u, 10f * u, 1.8f * u, f);
+                path.reset();
+                path.moveTo(4.5f * u, 18f * u);
+                path.lineTo(10f * u, 12.8f * u);
+                path.lineTo(14f * u, 16.6f * u);
+                path.lineTo(16.6f * u, 14f * u);
+                path.lineTo(19.5f * u, 17.4f * u);
+                c.drawPath(path, p);
+                break;
+            case WINDOW:
+                rect.set(3f * u, 4.8f * u, 21f * u, 19.2f * u);
+                c.drawRoundRect(rect, 2.8f * u, 2.8f * u, p);
+                c.drawLine(3f * u, 9.4f * u, 21f * u, 9.4f * u, p);
+                c.drawCircle(6.4f * u, 7.1f * u, 0.9f * u, f);
+                c.drawCircle(9.2f * u, 7.1f * u, 0.9f * u, f);
+                break;
+            case COOKIE:
+                c.drawCircle(12 * u, 12 * u, 10 * u, f);
+                c.drawCircle(8.4f * u, 9f * u, 1.5f * u, w);
+                c.drawCircle(14.2f * u, 8f * u, 1.3f * u, w);
+                c.drawCircle(10.4f * u, 14.4f * u, 1.5f * u, w);
+                c.drawCircle(15.8f * u, 14.6f * u, 1.3f * u, w);
+                c.drawCircle(18f * u, 10.6f * u, 1f * u, w);
+                break;
+            case PLAY:
+                c.drawCircle(12 * u, 12 * u, 10 * u, f);
+                path.reset();
+                path.moveTo(9.8f * u, 7.8f * u);
+                path.lineTo(16.6f * u, 12 * u);
+                path.lineTo(9.8f * u, 16.2f * u);
+                path.close();
+                c.drawPath(path, w);
+                break;
+            case BAR:
+                rect.set(3.5f * u, 4.5f * u, 20.5f * u, 19.5f * u);
+                c.drawRoundRect(rect, 3f * u, 3f * u, p);
+                rect.set(3.5f * u, 14f * u, 20.5f * u, 19.5f * u);
+                c.drawRoundRect(rect, 2.6f * u, 2.6f * u, f);
                 break;
             default: // INFO
                 c.drawCircle(12 * u, 12 * u, 9.4f * u, p);

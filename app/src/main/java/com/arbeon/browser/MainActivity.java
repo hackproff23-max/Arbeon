@@ -94,6 +94,7 @@ public class MainActivity extends Activity {
         Fx.init(this);
         buildUi();
         Fx.styleWindow(this);
+        WebPrefs.applyBars(this);
         newTab(getIntent() != null ? getIntent().getDataString() : null);
     }
 
@@ -613,12 +614,16 @@ public class MainActivity extends Activity {
 
         CookieManager cm = CookieManager.getInstance();
         cm.setAcceptCookie(true);
-        cm.setAcceptThirdPartyCookies(w, true);
+        cm.setAcceptThirdPartyCookies(w, WebPrefs.thirdParty(this));
 
         w.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String u = req.getUrl().toString();
+                if (WebPrefs.httpsOnly(MainActivity.this) && u.startsWith("http://")) {
+                    view.loadUrl("https://" + u.substring(7));
+                    return true;
+                }
                 if (u.startsWith("http://") || u.startsWith("https://")
                         || u.startsWith("about:") || u.startsWith("file:")) {
                     return false;
@@ -654,6 +659,16 @@ public class MainActivity extends Activity {
         });
 
         w.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, android.webkit.GeolocationPermissions.Callback cb) {
+                SitePerms.geo(MainActivity.this, origin, cb);
+            }
+
+            @Override
+            public void onPermissionRequest(android.webkit.PermissionRequest req) {
+                SitePerms.media(MainActivity.this, req);
+            }
+
             @Override
             public boolean onJsAlert(WebView view, String url, String message, android.webkit.JsResult result) {
                 new ArbeonDialog(MainActivity.this).setTitle("Esta p\u00e1gina diz").setMessage(message)
@@ -695,6 +710,7 @@ public class MainActivity extends Activity {
     private void applySettings(WebView w) {
         WebSettings s = w.getSettings();
         s.setJavaScriptEnabled(prefs.getBoolean("js", true));
+        WebPrefs.apply(this, w);
         s.setUserAgentString(prefs.getBoolean("desktop", false) ? DESKTOP_UA : defaultUA);
     }
 
