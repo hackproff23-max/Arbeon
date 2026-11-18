@@ -21,6 +21,8 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.MotionEvent;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
@@ -72,6 +74,9 @@ public class MainActivity extends Activity {
     private LinearLayout tabStrip;
     private HorizontalScrollView tabScroll;
     private Glyph btnBack, btnFwd, btnStar;
+    private Glyph btnReload, pullIndicator;
+    private float pullStartY, pullDist;
+    private boolean pullArmed;
     private EditText address;
     private ProgressBar progress;
     private FrameLayout webContainer;
@@ -243,9 +248,12 @@ public class MainActivity extends Activity {
             Tab t = curTab();
             if (!t.home && t.web.canGoForward()) t.web.goForward();
         });
-        Glyph btnReload = roundButton(Glyph.RELOAD, Fx.ACCENT, v -> {
+        btnReload = roundButton(Glyph.RELOAD, Fx.ACCENT, v -> {
             Tab t = curTab();
-            if (!t.home) t.web.reload();
+            if (!t.home) {
+                spinReload();
+                t.web.reload();
+            }
         });
 
         address = new EditText(this);
@@ -289,6 +297,12 @@ public class MainActivity extends Activity {
         content.addView(webContainer, new FrameLayout.LayoutParams(MATCH, MATCH));
         buildHome();
         content.addView(homeView, new FrameLayout.LayoutParams(MATCH, MATCH));
+        pullIndicator = roundButton(Glyph.RELOAD, Fx.ACCENT, null);
+        pullIndicator.setClickable(false);
+        pullIndicator.setAlpha(0f);
+        pullIndicator.setTranslationY(-dp(48));
+        content.addView(pullIndicator, new FrameLayout.LayoutParams(dp(40), dp(40),
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL));
         root.addView(content, new LinearLayout.LayoutParams(MATCH, 0, 1f));
 
         setContentView(root);
@@ -651,6 +665,8 @@ public class MainActivity extends Activity {
         });
 
         w.setDownloadListener((url, ua, cd, mime, len) -> DownloadsUi.onDownloadRequested(MainActivity.this, url, ua, cd, mime, len));
+        w.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        attachPull(w, t);
         return w;
     }
 
@@ -833,5 +849,83 @@ public class MainActivity extends Activity {
 
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+    }
+
+    // ---- recarregar: giro e puxar para atualizar
+
+    private void spinReload() {
+        if (btnReload == null) return;
+        btnReload.animate().cancel();
+        btnReload.setRotation(0f);
+        btnReload.animate().rotation(360f).setDuration(650)
+                .setInterpolator(new AccelerateDecelerateInterpolator())
+                .withEndAction(() -> btnReload.setRotation(0f)).start();
+    }
+
+    private void movePull(float dist) {
+        float ty = Math.min(dist * 0.5f, dp(80)) - dp(48);
+        pullIndicator.animate().cancel();
+        pullIndicator.setAlpha(Math.min(1f, dist / dp(40)));
+        pullIndicator.setTranslationY(ty);
+        pullIndicator.setRotation(dist * 1.5f);
+        float sc = dist >= dp(130) ? 1.15f : 1f;
+        pullIndicator.setScaleX(sc);
+        pullIndicator.setScaleY(sc);
+    }
+
+    private void hidePull() {
+        pullIndicator.animate().alpha(0f).translationY(-dp(48)).scaleX(1f).scaleY(1f)
+                .setDuration(200)
+                .withEndAction(() -> pullIndicator.setRotation(0f)).start();
+    }
+
+    private void endPull(boolean trigger) {
+        if (pullIndicator == null) return;
+        if (trigger) {
+            Tab t = curTab();
+            if (!t.home) {
+                spinReload();
+                t.web.reload();
+            }
+            pullIndicator.animate().translationY(dp(24)).alpha(1f).rotationBy(360f)
+                    .setDuration(600).withEndAction(this::hidePull).start();
+        } else {
+            hidePull();
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void attachPull(final WebView w, final Tab t) {
+        w.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    pullStartY = e.getY();
+                    pullArmed = isCur(t) && w.getScrollY() == 0;
+                    pullDist = 0f;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if (!pullArmed) break;
+                    if (e.getPointerCount() > 1 || w.getScrollY() > 0) {
+                        pullArmed = false;
+                        pullDist = 0f;
+                        endPull(false);
+                        break;
+                    }
+                    pullDist = Math.max(0f, e.getY() - pullStartY - dp(12));
+                    movePull(pullDist);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (pullArmed && pullDist > 0f) {
+                        endPull(e.getActionMasked() == MotionEvent.ACTION_UP && pullDist >= dp(130));
+                    }
+                    pullArmed = false;
+                    pullDist = 0f;
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        });
     }
 }
