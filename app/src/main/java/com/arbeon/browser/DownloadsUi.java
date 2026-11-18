@@ -13,10 +13,16 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
+import android.graphics.RectF;
+import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -52,18 +58,22 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Locale;
 
-/** Tela cheia de downloads (estilo "Transferências" do Chrome) e entrada dos downloads vindos do navegador. */
+/** Tela cheia de downloads (estilo "Transferências", visual azul/vidro) e entrada dos downloads vindos do navegador. */
 final class DownloadsUi {
-    private static final int BG = 0xFFF8F9FF;
+    private static final int BG = 0xFFF4F7FF;
+    private static final int BG2 = 0xFFE9EFFF;
     private static final int INK = 0xFF1B1B1F;
+    private static final int NAVY = 0xFF0B1B4D;
     private static final int SUB = 0xFF44474F;
     private static final int LINE = 0xFFDADCE5;
-    private static final int CHIP_SEL = 0xFFD8E2FF;
     private static final int CIRCLE = 0xFFECEEF6;
     private static final int BLUE = 0xFF1A73E8;
+    private static final int ACCENT = 0xFF1457E8;
+    private static final int PILL = 0xFFE3E9FA;
     private static final int RED = 0xFFD93025;
     private static final Locale PT = new Locale("pt", "BR");
     private static final String[] CHIPS = {"Todas", "Em andamento", "Imagens", "Vídeos", "Áudio", "Outro"};
+    private static final int[] CHIP_ICON = {Ic.DB, Ic.ARROWDOWN, Ic.IMAGE, Ic.PLAY, Ic.NOTE, Ic.FOLDER};
 
     private DownloadsUi() {
     }
@@ -197,7 +207,8 @@ final class DownloadsUi {
     // ------------------------------------------------------------------ ícones desenhados
 
     private static class Ic extends View {
-        static final int GEAR = 0, SEARCH = 1, CLOSE = 2, DOTS = 3, FILE = 4, CHECK = 5;
+        static final int GEAR = 0, SEARCH = 1, CLOSE = 2, DOTS = 3, FILE = 4, CHECK = 5,
+                DB = 6, IMAGE = 7, PLAY = 8, NOTE = 9, ARROWDOWN = 10, FOLDER = 11;
         private final int type;
         private int color;
         private final float iconDp;
@@ -267,6 +278,58 @@ final class DownloadsUi {
                     path.addCircle(0, 0, 3.4f * u, Path.Direction.CW);
                     c.drawPath(path, f);
                     break;
+                case DB:
+                    for (int i = 0; i < 3; i++) {
+                        c.drawRoundRect(4 * u, (3 + i * 6.5f) * u, 20 * u, (8.5f + i * 6.5f) * u,
+                                3 * u, 3 * u, f);
+                    }
+                    break;
+                case IMAGE:
+                    c.drawRoundRect(3 * u, 4 * u, 21 * u, 20 * u, 3 * u, 3 * u, p);
+                    path.reset();
+                    path.moveTo(5.5f * u, 17.5f * u);
+                    path.lineTo(10 * u, 11.5f * u);
+                    path.lineTo(13.5f * u, 15.5f * u);
+                    path.lineTo(15.5f * u, 13 * u);
+                    path.lineTo(18.5f * u, 17.5f * u);
+                    path.close();
+                    c.drawPath(path, f);
+                    c.drawCircle(16.5f * u, 8.5f * u, 1.8f * u, f);
+                    break;
+                case PLAY:
+                    c.drawCircle(12 * u, 12 * u, 9.5f * u, p);
+                    path.reset();
+                    path.moveTo(10 * u, 8 * u);
+                    path.lineTo(16 * u, 12 * u);
+                    path.lineTo(10 * u, 16 * u);
+                    path.close();
+                    c.drawPath(path, f);
+                    break;
+                case NOTE:
+                    c.drawCircle(9 * u, 17 * u, 3 * u, f);
+                    c.drawLine(12 * u, 17 * u, 12 * u, 5 * u, p);
+                    c.drawLine(12 * u, 5 * u, 18 * u, 7.5f * u, p);
+                    break;
+                case ARROWDOWN:
+                    c.drawLine(12 * u, 4 * u, 12 * u, 16 * u, p);
+                    path.reset();
+                    path.moveTo(6.5f * u, 11.5f * u);
+                    path.lineTo(12 * u, 17 * u);
+                    path.lineTo(17.5f * u, 11.5f * u);
+                    c.drawPath(path, p);
+                    c.drawLine(5 * u, 20.5f * u, 19 * u, 20.5f * u, p);
+                    break;
+                case FOLDER:
+                    path.reset();
+                    path.moveTo(3 * u, 6 * u);
+                    path.lineTo(10 * u, 6 * u);
+                    path.lineTo(12 * u, 8.5f * u);
+                    path.lineTo(21 * u, 8.5f * u);
+                    path.lineTo(21 * u, 19 * u);
+                    path.lineTo(3 * u, 19 * u);
+                    path.close();
+                    c.drawPath(path, f);
+                    break;
                 default: // FILE
                     path.reset();
                     path.moveTo(6 * u, 2 * u);
@@ -290,6 +353,90 @@ final class DownloadsUi {
         }
     }
 
+    /** Barra fina de uso do armazenamento. */
+    private static class Meter extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+        private float frac;
+
+        Meter(Context c) {
+            super(c);
+        }
+
+        void setFrac(float f) {
+            f = Math.max(0f, Math.min(1f, f));
+            if (f != frac) {
+                frac = f;
+                invalidate();
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float w = getWidth(), h = getHeight();
+            p.setStyle(Paint.Style.FILL);
+            p.setColor(0x331457E8);
+            r.set(0, 0, w, h);
+            c.drawRoundRect(r, h / 2f, h / 2f, p);
+            if (frac > 0f) {
+                p.setColor(ACCENT);
+                r.set(0, 0, Math.max(h, w * frac), h);
+                c.drawRoundRect(r, h / 2f, h / 2f, p);
+            }
+        }
+    }
+
+    /** Ilustração do estado vazio: seta de download entrando na bandeja. */
+    private static class EmptyArt extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+        private final Path path = new Path();
+
+        EmptyArt(Context c) {
+            super(c);
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float u = getWidth() / 220f;
+            float cx = getWidth() / 2f;
+            p.setStyle(Paint.Style.FILL);
+            p.setShader(new RadialGradient(cx, 120 * u, 95 * u, 0x441A5CFF, 0x001A5CFF, Shader.TileMode.CLAMP));
+            c.drawCircle(cx, 120 * u, 95 * u, p);
+            p.setShader(null);
+            // bandeja: borda azul, corpo branco e vão
+            p.setColor(0xFF1F5FF0);
+            r.set(cx - 72 * u, 112 * u, cx + 72 * u, 158 * u);
+            c.drawRoundRect(r, 20 * u, 20 * u, p);
+            p.setColor(0xFFFFFFFF);
+            r.set(cx - 72 * u, 106 * u, cx + 72 * u, 152 * u);
+            c.drawRoundRect(r, 20 * u, 20 * u, p);
+            p.setColor(0xFF2A6BFF);
+            r.set(cx - 54 * u, 110 * u, cx + 54 * u, 124 * u);
+            c.drawRoundRect(r, 7 * u, 7 * u, p);
+            // seta
+            p.setShader(new LinearGradient(0, 28 * u, 0, 124 * u, 0xFF66A9FF, 0xFF0A3CD0, Shader.TileMode.CLAMP));
+            r.set(cx - 15 * u, 28 * u, cx + 15 * u, 82 * u);
+            c.drawRoundRect(r, 8 * u, 8 * u, p);
+            path.reset();
+            path.moveTo(cx - 40 * u, 80 * u);
+            path.lineTo(cx + 40 * u, 80 * u);
+            path.lineTo(cx, 124 * u);
+            path.close();
+            c.drawPath(path, p);
+            p.setShader(null);
+            // faíscas
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeCap(Paint.Cap.ROUND);
+            p.setStrokeWidth(5 * u);
+            p.setColor(0xFF4D9BFF);
+            c.drawLine(cx - 84 * u, 58 * u, cx - 72 * u, 70 * u, p);
+            c.drawLine(cx - 90 * u, 84 * u, cx - 74 * u, 84 * u, p);
+            c.drawLine(cx + 84 * u, 58 * u, cx + 72 * u, 70 * u, p);
+            c.drawLine(cx + 90 * u, 84 * u, cx + 74 * u, 84 * u, p);
+        }
+    }
+
     private static Ic iconButton(Context c, int type, int color, View.OnClickListener l) {
         Ic i = new Ic(c, type, color, 24);
         TypedValue tv = new TypedValue();
@@ -298,6 +445,41 @@ final class DownloadsUi {
         i.setClickable(true);
         i.setOnClickListener(l);
         return i;
+    }
+
+    /** Botão redondo "vidro" do cabeçalho (engrenagem, lupa, fechar). */
+    private static Ic headerButton(Context c, int type, View.OnClickListener l) {
+        Ic i = new Ic(c, type, ACCENT, 22);
+        GradientDrawable oval = new GradientDrawable();
+        oval.setShape(GradientDrawable.OVAL);
+        oval.setColor(0xFFF8FAFF);
+        oval.setStroke(dp(c, 2), 0x551457E8);
+        i.setBackground(new RippleDrawable(ColorStateList.valueOf(0x331457E8), oval, null));
+        i.setElevation(dp(c, 4));
+        i.setClickable(true);
+        i.setOnClickListener(l);
+        return i;
+    }
+
+    private static View emptyState(Context c, String msg) {
+        LinearLayout l = new LinearLayout(c);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setGravity(Gravity.CENTER_HORIZONTAL);
+        l.setPadding(0, dp(c, 56), 0, 0);
+        l.addView(new EmptyArt(c), new LinearLayout.LayoutParams(dp(c, 220), dp(c, 170)));
+        TextView t = txt(c, msg, 20, NAVY);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(dp(c, 28), dp(c, 14), dp(c, 28), dp(c, 14));
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dp(c, 28));
+        g.setColor(0xFFEEF2FF);
+        g.setStroke(dp(c, 1), 0xFFDDE4F8);
+        t.setBackground(g);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tp.topMargin = dp(c, 8);
+        l.addView(t, tp);
+        return l;
     }
 
     // ------------------------------------------------------------------ tela cheia
@@ -323,28 +505,34 @@ final class DownloadsUi {
 
         LinearLayout root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(BG);
+        root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{BG, BG2}));
+        root.setClipChildren(false);
+        root.setClipToPadding(false);
 
         // --- cabeçalho: título (ou busca) + engrenagem, lupa, fechar
         LinearLayout head = new LinearLayout(a);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(a, 20), dp(a, 12), dp(a, 8), 0);
+        head.setPadding(dp(a, 20), dp(a, 12), dp(a, 8), dp(a, 8));
+        head.setClipChildren(false);
+        head.setClipToPadding(false);
 
-        final TextView title = txt(a, "Transferências", 28, INK);
+        final TextView title = txt(a, "Transferências", 28, NAVY);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final EditText search = new EditText(a);
         search.setHint("Pesquisar downloads");
         search.setSingleLine(true);
         search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        search.setTextColor(INK);
+        search.setTextColor(NAVY);
         search.setBackground(null);
         search.setVisibility(View.GONE);
         search.setInputType(InputType.TYPE_CLASS_TEXT);
         head.addView(search, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        final Ic icSearch = iconButton(a, Ic.SEARCH, INK, null);
+        final Ic icSearch = headerButton(a, Ic.SEARCH, null);
         icSearch.setOnClickListener(v -> {
             boolean on = search.getVisibility() != View.VISIBLE;
             search.setVisibility(on ? View.VISIBLE : View.GONE);
@@ -372,27 +560,57 @@ final class DownloadsUi {
             public void afterTextChanged(Editable s) {
             }
         });
-        Ic icGear = iconButton(a, Ic.GEAR, INK, v -> settingsDialog(a, eng));
-        Ic icClose = iconButton(a, Ic.CLOSE, INK, v -> d.dismiss());
-        head.addView(icGear, new LinearLayout.LayoutParams(dp(a, 48), dp(a, 48)));
-        head.addView(icSearch, new LinearLayout.LayoutParams(dp(a, 48), dp(a, 48)));
-        head.addView(icClose, new LinearLayout.LayoutParams(dp(a, 48), dp(a, 48)));
+        Ic icGear = headerButton(a, Ic.GEAR, v -> settingsDialog(a, eng));
+        Ic icClose = headerButton(a, Ic.CLOSE, v -> d.dismiss());
+        Ic[] btns = {icGear, icSearch, icClose};
+        for (Ic b : btns) {
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44));
+            bp.leftMargin = dp(a, 4);
+            bp.rightMargin = dp(a, 6);
+            head.addView(b, bp);
+        }
         root.addView(head);
 
-        // --- uso de armazenamento
-        final TextView usage = txt(a, "", 14, SUB);
-        usage.setPadding(dp(a, 20), dp(a, 14), dp(a, 20), dp(a, 14));
-        root.addView(usage);
-        View line = new View(a);
-        line.setBackgroundColor(LINE);
-        root.addView(line, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 1)));
+        // --- armazenamento do aparelho: em uso, total e livre
+        LinearLayout pill = new LinearLayout(a);
+        pill.setOrientation(LinearLayout.HORIZONTAL);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        pill.setPadding(dp(a, 14), dp(a, 10), dp(a, 16), dp(a, 10));
+        GradientDrawable pb = new GradientDrawable();
+        pb.setCornerRadius(dp(a, 22));
+        pb.setColor(PILL);
+        pill.setBackground(pb);
+        Ic dbIc = new Ic(a, Ic.DB, ACCENT, 22);
+        pill.addView(dbIc, new LinearLayout.LayoutParams(dp(a, 36), dp(a, 36)));
+
+        LinearLayout pcol = new LinearLayout(a);
+        pcol.setOrientation(LinearLayout.VERTICAL);
+        final TextView usage = txt(a, "", 14, NAVY);
+        usage.setSingleLine(true);
+        pcol.addView(usage);
+        final Meter meter = new Meter(a);
+        LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 6));
+        mp.topMargin = dp(a, 6);
+        pcol.addView(meter, mp);
+        final TextView freeTv = txt(a, "", 13, SUB);
+        freeTv.setSingleLine(true);
+        freeTv.setPadding(0, dp(a, 4), 0, 0);
+        pcol.addView(freeTv);
+        LinearLayout.LayoutParams pcl = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        pcl.leftMargin = dp(a, 10);
+        pill.addView(pcol, pcl);
+        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pl.setMargins(dp(a, 16), dp(a, 6), dp(a, 16), dp(a, 4));
+        root.addView(pill, pl);
 
         // --- filtros
         HorizontalScrollView hs = new HorizontalScrollView(a);
         hs.setHorizontalScrollBarEnabled(false);
         final LinearLayout chipRow = new LinearLayout(a);
         chipRow.setOrientation(LinearLayout.HORIZONTAL);
-        chipRow.setPadding(dp(a, 16), dp(a, 14), dp(a, 16), dp(a, 8));
+        chipRow.setPadding(dp(a, 16), dp(a, 10), dp(a, 16), dp(a, 8));
         hs.addView(chipRow);
         root.addView(hs);
 
@@ -413,41 +631,34 @@ final class DownloadsUi {
                 LinearLayout chip = new LinearLayout(a);
                 chip.setOrientation(LinearLayout.HORIZONTAL);
                 chip.setGravity(Gravity.CENTER_VERTICAL);
-                chip.setPadding(dp(a, sel ? 10 : 14), 0, dp(a, 14), 0);
+                chip.setPadding(dp(a, 12), 0, dp(a, 16), 0);
                 GradientDrawable cb = new GradientDrawable();
-                cb.setCornerRadius(dp(a, 8));
+                cb.setCornerRadius(dp(a, 20));
                 if (sel) {
-                    cb.setColor(CHIP_SEL);
+                    cb.setColor(0xFFEAF1FF);
+                    cb.setStroke(dp(a, 2), ACCENT);
                 } else {
-                    cb.setColor(Color.TRANSPARENT);
-                    cb.setStroke(dp(a, 1), 0xFF74777F);
+                    cb.setColor(0xFFF7F9FF);
+                    cb.setStroke(dp(a, 1), 0xFFD3DBF2);
                 }
                 chip.setBackground(cb);
-                if (sel) {
-                    Ic ck = new Ic(a, Ic.CHECK, INK, 18);
-                    chip.addView(ck, new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
-                }
-                TextView t = txt(a, CHIPS[i], 15, INK);
-                t.setPadding(dp(a, sel ? 6 : 0), 0, 0, 0);
+                Ic ci = new Ic(a, sel ? Ic.CHECK : CHIP_ICON[i], sel ? ACCENT : NAVY, 20);
+                chip.addView(ci, new LinearLayout.LayoutParams(dp(a, 26), dp(a, 26)));
+                TextView t = txt(a, CHIPS[i], 15, sel ? ACCENT : NAVY);
+                t.setPadding(dp(a, 6), 0, 0, 0);
+                if (sel) t.setTypeface(Typeface.DEFAULT_BOLD);
                 chip.addView(t);
                 chip.setOnClickListener(v -> {
                     filter[0] = idx;
                     buildChips[0].run();
                 });
                 LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT, dp(a, 34));
+                        ViewGroup.LayoutParams.WRAP_CONTENT, dp(a, 40));
                 cp.rightMargin = dp(a, 10);
                 chipRow.addView(chip, cp);
             }
         };
         buildChips[0].run();
-
-        StatFs sf = null;
-        try {
-            sf = new StatFs(Environment.getDataDirectory().getPath());
-        } catch (Exception ignored) {
-        }
-        final long totalStorage = sf == null ? 0 : sf.getTotalBytes();
 
         final Runnable[] refresh = new Runnable[1];
         refresh[0] = () -> {
@@ -472,17 +683,14 @@ final class DownloadsUi {
                 }
                 Collections.sort(vis, (x, y) -> Long.compare(y.added, x.added));
                 if (vis.isEmpty()) {
-                    TextView e = txt(a, eng.items.isEmpty() ? "Nenhum download ainda" : "Nada encontrado", 16, SUB);
-                    e.setGravity(Gravity.CENTER);
-                    e.setPadding(0, dp(a, 48), 0, 0);
-                    list.addView(e);
+                    list.addView(emptyState(a, eng.items.isEmpty() ? "Nenhum download ainda" : "Nada encontrado"));
                 }
                 String last = null;
                 for (DlItem it : vis) {
                     String g = dayLabel(it.added);
                     if (!g.equals(last)) {
                         last = g;
-                        TextView gh = txt(a, g, 20, INK);
+                        TextView gh = txt(a, g, 20, NAVY);
                         gh.setPadding(dp(a, 20), dp(a, 18), dp(a, 20), dp(a, 8));
                         list.addView(gh);
                     }
@@ -492,9 +700,18 @@ final class DownloadsUi {
                 }
                 list.addView(new View(a), new LinearLayout.LayoutParams(1, dp(a, 24)));
             }
-            long used = 0;
-            for (DlItem it : eng.items) used += it.done();
-            usage.setText("Usando " + humanPt(used) + " de " + humanPt(totalStorage));
+            // armazenamento do aparelho (atualiza a cada ciclo)
+            long tot = 0, free = 0;
+            try {
+                StatFs s = new StatFs(Environment.getDataDirectory().getPath());
+                tot = s.getTotalBytes();
+                free = s.getAvailableBytes();
+            } catch (Exception ignored) {
+            }
+            long usedPhone = Math.max(0, tot - free);
+            usage.setText("Usando " + humanPt(usedPhone) + " de " + humanPt(tot));
+            freeTv.setText("Livre " + humanPt(free));
+            meter.setFrac(tot > 0 ? (float) usedPhone / (float) tot : 0f);
             for (Row r : rows) update(r);
             h.postDelayed(refresh[0], 500);
         };
@@ -507,7 +724,7 @@ final class DownloadsUi {
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
             w.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             w.setStatusBarColor(BG);
-            w.setNavigationBarColor(BG);
+            w.setNavigationBarColor(BG2);
             int vis = 0;
             if (Build.VERSION.SDK_INT >= 23) vis |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
             if (Build.VERSION.SDK_INT >= 26) vis |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
