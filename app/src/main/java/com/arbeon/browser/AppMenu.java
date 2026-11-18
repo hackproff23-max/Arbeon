@@ -13,13 +13,15 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 
 /** Menu ⋮ em painel no canto superior direito: fileira de botões redondos + lista com ícones de brilho azul. */
 final class AppMenu {
     // índices do array de ações
     static final int BACK = 0, FWD = 1, STAR = 2, DOWNLOAD = 3, RELOAD = 4,
-            NEW_TAB = 5, CLEAR = 6, SETTINGS = 7, TRANSFERS = 8, BOOKMARKS = 9, SHARE = 10;
+            NEW_TAB = 5, CLEAR = 6, SETTINGS = 7, TRANSFERS = 8, BOOKMARKS = 9, SHARE = 10,
+            HISTORY = 11, DESKTOP = 12;
 
     private AppMenu() {
     }
@@ -45,7 +47,7 @@ final class AppMenu {
     }
 
     static void show(final Activity a, boolean canBack, boolean canFwd, boolean starred,
-                     final Runnable[] act) {
+                     boolean desktopOn, final Runnable[] act) {
         final Dialog d = new Dialog(a, android.R.style.Theme_Material_Dialog_NoActionBar);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -98,17 +100,25 @@ final class AppMenu {
         item(a, d, panel, Glyph.TRASH, false, "Excluir dados de navegação", act, CLEAR);
         item(a, d, panel, Glyph.SLIDERS, false, "Configurações", act, SETTINGS);
         panel.addView(divider(a));
+        item(a, d, panel, Glyph.HISTORY, false, "Histórico", act, HISTORY);
         item(a, d, panel, Glyph.DLCHECK, false, "Transferências", act, TRANSFERS);
         item(a, d, panel, Glyph.STAR, true, "Favoritos", act, BOOKMARKS);
         panel.addView(divider(a));
+        LinearLayout desk = item(a, d, panel, Glyph.DESKTOP, desktopOn, "Modo computador", act, DESKTOP);
+        Switch sw = new Switch(a);
+        sw.setChecked(desktopOn);
+        sw.setClickable(false);
+        sw.setFocusable(false);
+        desk.addView(sw, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         item(a, d, panel, Glyph.SHARE, false, "Compartilhar…", act, SHARE);
 
         d.setContentView(wrap);
         Window w = d.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            int sw = a.getResources().getDisplayMetrics().widthPixels;
-            w.setLayout((int) (sw * 0.90f), WindowManager.LayoutParams.WRAP_CONTENT);
+            int sw2 = a.getResources().getDisplayMetrics().widthPixels;
+            w.setLayout((int) (sw2 * 0.90f), WindowManager.LayoutParams.WRAP_CONTENT);
             w.setGravity(Gravity.TOP | Gravity.END);
             WindowManager.LayoutParams lp = w.getAttributes();
             int sb = 0;
@@ -133,8 +143,8 @@ final class AppMenu {
         return v;
     }
 
-    private static void item(final Activity a, final Dialog d, LinearLayout panel, int type, boolean on,
-                             String label, final Runnable[] act, final int idx) {
+    private static LinearLayout item(final Activity a, final Dialog d, LinearLayout panel, int type, boolean on,
+                                     String label, final Runnable[] act, final int idx) {
         LinearLayout row = new LinearLayout(a);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -159,5 +169,6 @@ final class AppMenu {
         });
         panel.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+        return row;
     }
 }

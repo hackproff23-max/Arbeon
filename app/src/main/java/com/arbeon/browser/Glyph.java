@@ -7,11 +7,11 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.view.View;
 
-/** Ícones desenhados no código (setas, recarregar, lupa, estrela, download, ⋮, +, X, globo). */
+/** Ícones desenhados no código (setas, recarregar, lupa, estrela, download, ⋮, +, X, globo, histórico, computador). */
 final class Glyph extends View {
     static final int BACK = 0, FWD = 1, RELOAD = 2, SEARCH = 3, STAR = 4, DOWNLOAD = 5,
             DOTS = 6, PLUS = 7, CLOSE = 8, GLOBE = 9, PLUSBOX = 10, TRASH = 11,
-            SLIDERS = 12, DLCHECK = 13, SHARE = 14;
+            SLIDERS = 12, DLCHECK = 13, SHARE = 14, HISTORY = 15, DESKTOP = 16;
 
     private final int type;
     private int color;
@@ -207,6 +207,17 @@ final class Glyph extends View {
                 c.drawCircle(6 * u, 12 * u, 3f * u, f);
                 c.drawCircle(18 * u, 5.5f * u, 3f * u, f);
                 c.drawCircle(18 * u, 18.5f * u, 3f * u, f);
+                break;
+            case HISTORY:
+                c.drawCircle(12 * u, 12 * u, 9 * u, p);
+                c.drawLine(12 * u, 12 * u, 12 * u, 6.5f * u, p);
+                c.drawLine(12 * u, 12 * u, 16 * u, 14.5f * u, p);
+                break;
+            case DESKTOP:
+                rect.set(3 * u, 4 * u, 21 * u, 16 * u);
+                c.drawRoundRect(rect, 2.5f * u, 2.5f * u, p);
+                c.drawLine(12 * u, 16 * u, 12 * u, 20 * u, p);
+                c.drawLine(8 * u, 20 * u, 16 * u, 20 * u, p);
                 break;
             default: // GLOBE
                 c.drawCircle(12 * u, 12 * u, 9.3f * u, p);

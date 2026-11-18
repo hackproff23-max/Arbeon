@@ -271,6 +271,12 @@ public class MainActivity extends Activity {
             return true;
         });
         LinearLayout addrPill = searchPill(address, 40, null);
+        // toque na barra: abre a barra de endereço expandida (como no Chrome)
+        address.setFocusable(false);
+        address.setFocusableInTouchMode(false);
+        address.setCursorVisible(false);
+        address.setOnClickListener(v -> openAddressBar());
+        addrPill.setOnClickListener(v -> openAddressBar());
 
         btnStar = roundButton(Glyph.STAR, Fx.NAVY, v -> toggleBookmark());
         Glyph btnDl = roundButton(Glyph.DOWNLOAD, Fx.NAVY, v -> DownloadsUi.show(this));
@@ -597,6 +603,24 @@ public class MainActivity extends Activity {
         if (im != null && f != null) im.hideSoftInputFromWindow(f.getWindowToken(), 0);
     }
 
+    /** Barra de endereço expandida em tela cheia (campo, página atual, copiado e histórico). */
+    private void openAddressBar() {
+        Tab t = curTab();
+        final String u = t.home ? "" : t.url;
+        String ti = t.home ? "" : t.title;
+        AddressBar.show(this, u, ti, new AddressBar.Host() {
+            @Override
+            public void go(String input) {
+                MainActivity.this.go(input);
+            }
+
+            @Override
+            public void share() {
+                sharePage();
+            }
+        });
+    }
+
     // ------------------------------------------------------------------ WebView
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -650,6 +674,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 t.url = url;
+                HistoryStore.add(MainActivity.this, view.getTitle(), url);
                 if (isCur(t)) {
                     if (!address.hasFocus()) address.setText(url);
                     updateStar();
@@ -800,7 +825,7 @@ public class MainActivity extends Activity {
         boolean back = !t.home && t.web.canGoBack();
         boolean fwd = !t.home && t.web.canGoForward();
         boolean starred = !t.home && bookmarkIndex(t.url) >= 0;
-        AppMenu.show(this, back, fwd, starred, new Runnable[]{
+        AppMenu.show(this, back, fwd, starred, prefs.getBoolean("desktop", false), new Runnable[]{
                 () -> { if (!t.home && t.web.canGoBack()) t.web.goBack(); },
                 () -> { if (!t.home && t.web.canGoForward()) t.web.goForward(); },
                 this::toggleBookmark,
@@ -811,7 +836,23 @@ public class MainActivity extends Activity {
                 this::showSettings,
                 () -> DownloadsUi.show(this),
                 this::showBookmarks,
-                this::sharePage});
+                this::sharePage,
+                this::showHistory,
+                this::toggleDesktop});
+    }
+
+    private void showHistory() {
+        HistoryUi.show(this, url -> go(url));
+    }
+
+    /** Liga/desliga o modo computador (site para PC) e recarrega a página. */
+    private void toggleDesktop() {
+        boolean on = !prefs.getBoolean("desktop", false);
+        prefs.edit().putBoolean("desktop", on).apply();
+        for (Tab t : tabs) applySettings(t.web);
+        Tab c = curTab();
+        if (!c.home) c.web.reload();
+        toast(on ? "Modo computador ativado" : "Modo computador desativado");
     }
 
     private void confirmClear() {
@@ -850,6 +891,7 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().removeAllCookies(null);
         CookieManager.getInstance().flush();
         WebStorage.getInstance().deleteAllData();
+        HistoryStore.clear(this);
         for (Tab t : tabs) {
             t.web.clearCache(true);
             t.web.clearHistory();
