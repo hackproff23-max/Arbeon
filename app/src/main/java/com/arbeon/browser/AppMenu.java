@@ -3,145 +3,161 @@ package com.arbeon.browser;
 import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.StateListDrawable;
-import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Menu ⋮ em painel claro arredondado, itens em pílulas, sem ícones (estilo GBA Emu). */
+/** Menu ⋮ em painel no canto superior direito: fileira de botões redondos + lista com ícones de brilho azul. */
 final class AppMenu {
-    private static final String[] NAMES = {
-            "NOVA GUIA", "FAVORITOS", "CONFIGURAÇÕES", "COMPARTILHAR PÁGINA", "DOWNLOADS"};
+    // índices do array de ações
+    static final int BACK = 0, FWD = 1, STAR = 2, DOWNLOAD = 3, RELOAD = 4,
+            NEW_TAB = 5, CLEAR = 6, SETTINGS = 7, TRANSFERS = 8, BOOKMARKS = 9, SHARE = 10;
 
     private AppMenu() {
     }
 
     private static int dp(Activity a, int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-                a.getResources().getDisplayMetrics());
+        return Fx.dp(a, v);
     }
 
-    private static GradientDrawable pill(Activity a, int color) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color);
-        g.setCornerRadius(dp(a, 22));
-        g.setStroke(dp(a, 1), 0x33FFFFFF);
+    private static Glyph round(Activity a, int type, int size, boolean enabled, boolean on) {
+        Glyph g = new Glyph(a, type, enabled ? Fx.NAVY : 0xFF9AA0B5, 22);
+        g.setOn(on);
+        if (enabled) {
+            g.setBackground(Fx.button(a, true));
+            Fx.glow(g, 4);
+        } else {
+            GradientDrawable gd = new GradientDrawable();
+            gd.setShape(GradientDrawable.OVAL);
+            gd.setColor(0xFFE3E5EC);
+            g.setBackground(gd);
+            g.setClickable(false);
+        }
         return g;
     }
 
-    /** actions na mesma ordem de NAMES. */
-    static void show(final Activity a, final Runnable[] actions) {
+    static void show(final Activity a, boolean canBack, boolean canFwd, boolean starred,
+                     final Runnable[] act) {
         final Dialog d = new Dialog(a, android.R.style.Theme_Material_Dialog_NoActionBar);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
+        FrameLayout wrap = new FrameLayout(a);
+        wrap.setPadding(dp(a, 14), dp(a, 4), dp(a, 14), dp(a, 18));
+        wrap.setClipChildren(false);
+        wrap.setClipToPadding(false);
+
         LinearLayout panel = new LinearLayout(a);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(a, 20), dp(a, 22), dp(a, 20), dp(a, 20));
+        panel.setClipChildren(false);
+        panel.setClipToPadding(false);
+        panel.setPadding(dp(a, 16), dp(a, 16), dp(a, 16), dp(a, 10));
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xF7FFFFFF, 0xF2E3E7F6});
-        bg.setCornerRadius(dp(a, 30));
-        bg.setStroke(dp(a, 2), 0xFFFFFFFF);
+                new int[]{0xFFFFFFFF, 0xFFF1F3FC});
+        bg.setCornerRadius(dp(a, 28));
+        bg.setStroke(dp(a, 2), 0xFFB9CCF7);
         panel.setBackground(bg);
+        Fx.glow(panel, 10);
+        wrap.addView(panel, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        Typeface cond = Typeface.create("sans-serif-condensed", Typeface.BOLD);
-
-        TextView title = new TextView(a);
-        title.setText("MENU");
-        title.setTypeface(cond);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-        title.setLetterSpacing(0.03f);
-        title.setTextColor(0xFF0B1230);
-        title.setPadding(dp(a, 4), 0, 0, dp(a, 14));
-        panel.addView(title);
-
-        // subtítulo do item Downloads: quantos estão baixando agora
-        int running = 0;
-        try {
-            for (DlItem it : DownloadEngine.get(a).items) if (it.state == DlItem.RUNNING) running++;
-        } catch (Exception ignored) {
-        }
-
-        for (int i = 0; i < NAMES.length; i++) {
+        // ---- fileira de cima: voltar, avançar, favoritar, download, recarregar
+        LinearLayout top = new LinearLayout(a);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setClipChildren(false);
+        int[] types = {Glyph.BACK, Glyph.FWD, Glyph.STAR, Glyph.DOWNLOAD, Glyph.RELOAD};
+        boolean[] enabled = {canBack, canFwd, true, true, true};
+        for (int i = 0; i < types.length; i++) {
             final int idx = i;
-            String sub = null;
-            if (i == 2) sub = "JAVASCRIPT E MODO DESKTOP";
-            if (i == 4) sub = running > 0 ? running + (running == 1 ? " BAIXANDO AGORA" : " BAIXANDO AGORA") : "VELOCIDADE, FILA E LINKS";
-
-            LinearLayout row = new LinearLayout(a);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(a, 20), dp(a, 14), dp(a, 16), dp(a, 14));
-            row.setBackground(Fx.button(a, false));
-            Fx.glow(row, 3);
-            row.setClickable(true);
-
-            LinearLayout texts = new LinearLayout(a);
-            texts.setOrientation(LinearLayout.VERTICAL);
-
-            TextView name = new TextView(a);
-            name.setText(NAMES[i]);
-            name.setTypeface(cond);
-            name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
-            name.setLetterSpacing(0.02f);
-            name.setTextColor(0xFF0B1230);
-            texts.addView(name);
-
-            if (sub != null) {
-                TextView s = new TextView(a);
-                s.setText(sub);
-                s.setTypeface(cond);
-                s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-                s.setLetterSpacing(0.02f);
-                s.setTextColor(0xFF6B7280);
-                texts.addView(s);
+            FrameLayout cell = new FrameLayout(a);
+            cell.setClipChildren(false);
+            Glyph g = round(a, types[i], 50, enabled[i], i == STAR && starred);
+            if (enabled[i]) {
+                g.setOnClickListener(v -> {
+                    d.dismiss();
+                    if (act[idx] != null) act[idx].run();
+                });
             }
-            row.addView(texts, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-            TextView chev = new TextView(a);
-            chev.setText("›");
-            chev.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-            chev.setTextColor(0xFF8A8F98);
-            row.addView(chev);
-
-            row.setOnClickListener(v -> {
-                d.dismiss();
-                if (idx < actions.length && actions[idx] != null) actions[idx].run();
-            });
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.bottomMargin = dp(a, 10);
-            panel.addView(row, lp);
+            FrameLayout.LayoutParams gp = new FrameLayout.LayoutParams(dp(a, 48), dp(a, 48), Gravity.CENTER);
+            cell.addView(g, gp);
+            top.addView(cell, new LinearLayout.LayoutParams(0, dp(a, 56), 1f));
         }
+        panel.addView(top);
 
-        d.setContentView(panel);
+        // ---- lista em grupos
+        panel.addView(divider(a));
+        item(a, d, panel, Glyph.PLUSBOX, false, "Nova guia", act, NEW_TAB);
+        panel.addView(divider(a));
+        item(a, d, panel, Glyph.TRASH, false, "Excluir dados de navegação", act, CLEAR);
+        item(a, d, panel, Glyph.SLIDERS, false, "Configurações", act, SETTINGS);
+        panel.addView(divider(a));
+        item(a, d, panel, Glyph.DLCHECK, false, "Transferências", act, TRANSFERS);
+        item(a, d, panel, Glyph.STAR, true, "Favoritos", act, BOOKMARKS);
+        panel.addView(divider(a));
+        item(a, d, panel, Glyph.SHARE, false, "Compartilhar…", act, SHARE);
+
+        d.setContentView(wrap);
         Window w = d.getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             int sw = a.getResources().getDisplayMetrics().widthPixels;
             w.setLayout((int) (sw * 0.90f), WindowManager.LayoutParams.WRAP_CONTENT);
-            w.setGravity(Gravity.CENTER);
-            w.setDimAmount(0.45f);
-            if (Build.VERSION.SDK_INT >= 31) {
-                try {
-                    w.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-                    WindowManager.LayoutParams lp = w.getAttributes();
-                    lp.setBlurBehindRadius(40);
-                    w.setAttributes(lp);
-                } catch (Exception ignored) {
-                }
-            }
+            w.setGravity(Gravity.TOP | Gravity.END);
+            WindowManager.LayoutParams lp = w.getAttributes();
+            int sb = 0;
+            int rid = a.getResources().getIdentifier("status_bar_height", "dimen", "android");
+            if (rid > 0) sb = a.getResources().getDimensionPixelSize(rid);
+            lp.y = sb;
+            lp.dimAmount = 0.28f;
+            w.setAttributes(lp);
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         }
         d.setCanceledOnTouchOutside(true);
         d.show();
+    }
+
+    private static View divider(Activity a) {
+        View v = new View(a);
+        v.setBackgroundColor(0xFFD3DBF2);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 1));
+        lp.setMargins(dp(a, 4), dp(a, 6), dp(a, 4), dp(a, 6));
+        v.setLayoutParams(lp);
+        return v;
+    }
+
+    private static void item(final Activity a, final Dialog d, LinearLayout panel, int type, boolean on,
+                             String label, final Runnable[] act, final int idx) {
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setClipChildren(false);
+        row.setPadding(dp(a, 2), dp(a, 5), dp(a, 8), dp(a, 5));
+        row.setClickable(true);
+
+        Glyph g = round(a, type, 44, true, on);
+        g.setClickable(false);
+        row.addView(g, new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44)));
+
+        TextView t = new TextView(a);
+        t.setText(label);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        t.setTextColor(Fx.NAVY);
+        t.setPadding(dp(a, 16), 0, 0, 0);
+        row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        row.setOnClickListener(v -> {
+            d.dismiss();
+            if (act[idx] != null) act[idx].run();
+        });
+        panel.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 }

@@ -10,7 +10,8 @@ import android.view.View;
 /** Ícones desenhados no código (setas, recarregar, lupa, estrela, download, ⋮, +, X, globo). */
 final class Glyph extends View {
     static final int BACK = 0, FWD = 1, RELOAD = 2, SEARCH = 3, STAR = 4, DOWNLOAD = 5,
-            DOTS = 6, PLUS = 7, CLOSE = 8, GLOBE = 9;
+            DOTS = 6, PLUS = 7, CLOSE = 8, GLOBE = 9, PLUSBOX = 10, TRASH = 11,
+            SLIDERS = 12, DLCHECK = 13, SHARE = 14;
 
     private final int type;
     private int color;
@@ -158,6 +159,50 @@ final class Glyph extends View {
             case CLOSE:
                 c.drawLine(6 * u, 6 * u, 18 * u, 18 * u, p);
                 c.drawLine(18 * u, 6 * u, 6 * u, 18 * u, p);
+                break;
+            case PLUSBOX:
+                rect.set(3.5f * u, 3.5f * u, 20.5f * u, 20.5f * u);
+                c.drawRoundRect(rect, 4.5f * u, 4.5f * u, p);
+                c.drawLine(12 * u, 8 * u, 12 * u, 16 * u, p);
+                c.drawLine(8 * u, 12 * u, 16 * u, 12 * u, p);
+                break;
+            case TRASH:
+                c.drawLine(4.5f * u, 6.5f * u, 19.5f * u, 6.5f * u, p);
+                path.reset();
+                path.moveTo(9 * u, 6.5f * u);
+                path.lineTo(9 * u, 4 * u);
+                path.lineTo(15 * u, 4 * u);
+                path.lineTo(15 * u, 6.5f * u);
+                c.drawPath(path, p);
+                path.reset();
+                path.moveTo(6.5f * u, 6.5f * u);
+                path.lineTo(7.4f * u, 20 * u);
+                path.lineTo(16.6f * u, 20 * u);
+                path.lineTo(17.5f * u, 6.5f * u);
+                c.drawPath(path, p);
+                c.drawLine(10.2f * u, 10 * u, 10.2f * u, 16.5f * u, p);
+                c.drawLine(13.8f * u, 10 * u, 13.8f * u, 16.5f * u, p);
+                break;
+            case SLIDERS:
+                c.drawCircle(7 * u, 7 * u, 2.6f * u, p);
+                c.drawLine(12 * u, 7 * u, 20.5f * u, 7 * u, p);
+                c.drawLine(3.5f * u, 17 * u, 12 * u, 17 * u, p);
+                c.drawCircle(17 * u, 17 * u, 2.6f * u, p);
+                break;
+            case DLCHECK:
+                path.reset();
+                path.moveTo(5.5f * u, 10.5f * u);
+                path.lineTo(10.5f * u, 15.5f * u);
+                path.lineTo(19 * u, 5.5f * u);
+                c.drawPath(path, p);
+                c.drawLine(5 * u, 20 * u, 19 * u, 20 * u, p);
+                break;
+            case SHARE:
+                c.drawLine(6 * u, 12 * u, 18 * u, 5.5f * u, p);
+                c.drawLine(6 * u, 12 * u, 18 * u, 18.5f * u, p);
+                c.drawCircle(6 * u, 12 * u, 3f * u, f);
+                c.drawCircle(18 * u, 5.5f * u, 3f * u, f);
+                c.drawCircle(18 * u, 18.5f * u, 3f * u, f);
                 break;
             default: // GLOBE
                 c.drawCircle(12 * u, 12 * u, 9.3f * u, p);

@@ -751,8 +751,35 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ menu e configurações
 
     private void showMenu(View anchor) {
-        AppMenu.show(this, new Runnable[]{() -> newTab(null), this::showBookmarks,
-                this::showSettings, this::sharePage, () -> DownloadsUi.show(this)});
+        showMenuV2();
+    }
+
+    private void showMenuV2() {
+        final Tab t = curTab();
+        boolean back = !t.home && t.web.canGoBack();
+        boolean fwd = !t.home && t.web.canGoForward();
+        boolean starred = !t.home && bookmarkIndex(t.url) >= 0;
+        AppMenu.show(this, back, fwd, starred, new Runnable[]{
+                () -> { if (!t.home && t.web.canGoBack()) t.web.goBack(); },
+                () -> { if (!t.home && t.web.canGoForward()) t.web.goForward(); },
+                this::toggleBookmark,
+                () -> DownloadsUi.show(this),
+                () -> { if (!t.home) t.web.reload(); },
+                () -> newTab(null),
+                this::confirmClear,
+                this::showSettings,
+                () -> DownloadsUi.show(this),
+                this::showBookmarks,
+                this::sharePage});
+    }
+
+    private void confirmClear() {
+        new AlertDialog.Builder(this, DIALOG_THEME)
+                .setTitle("Excluir dados de navegação?")
+                .setMessage("Cookies, cache, histórico e dados de sites serão apagados.")
+                .setPositiveButton("Excluir", (d, w) -> clearData())
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void sharePage() {
