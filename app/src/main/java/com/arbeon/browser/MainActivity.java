@@ -3,7 +3,6 @@ package com.arbeon.browser;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -11,10 +10,11 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -24,7 +24,6 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
-import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -36,7 +35,6 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -53,6 +51,7 @@ public class MainActivity extends Activity {
     private static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
     private static final int BLUE = 0xFF1A73E8;
     private static final int GRAY = 0xFF5F6368;
+    private static final int DIALOG_THEME = android.R.style.Theme_Material_Light_Dialog_Alert;
     private static final String DESKTOP_UA =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/124.0.0.0 Safari/537.36";
@@ -72,7 +71,7 @@ public class MainActivity extends Activity {
 
     private LinearLayout tabStrip;
     private HorizontalScrollView tabScroll;
-    private TextView btnBack, btnFwd, btnStar;
+    private Glyph btnBack, btnFwd, btnStar;
     private EditText address;
     private ProgressBar progress;
     private FrameLayout webContainer;
@@ -141,8 +140,7 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ interface
 
     private int dp(int v) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
-                getResources().getDisplayMetrics());
+        return Fx.dp(this, v);
     }
 
     private GradientDrawable rounded(int color, int radiusDp, int strokeColor) {
@@ -153,66 +151,104 @@ public class MainActivity extends Activity {
         return g;
     }
 
-    private TextView iconButton(String glyph, int sizeSp, View.OnClickListener l) {
-        TextView b = new TextView(this);
-        b.setText(glyph);
-        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp);
-        b.setTextColor(GRAY);
-        b.setGravity(Gravity.CENTER);
-        b.setClickable(true);
-        b.setOnClickListener(l);
-        TypedValue tv = new TypedValue();
-        getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true);
-        if (tv.resourceId != 0) b.setBackgroundResource(tv.resourceId);
-        return b;
+    /** Botão redondo claro com brilho azul, igual ao modelo. */
+    private Glyph roundButton(int type, int color, View.OnClickListener l) {
+        Glyph g = new Glyph(this, type, color, 19);
+        g.setBackground(Fx.button(this, true));
+        Fx.glow(g, 4);
+        g.setOnClickListener(l);
+        return g;
+    }
+
+    private LinearLayout.LayoutParams btnLp() {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(dp(38), dp(38));
+        p.setMargins(dp(2), 0, dp(2), 0);
+        return p;
+    }
+
+    /** Campo em pílula branca com borda azul e lupa (usado na barra e na tela inicial). */
+    private LinearLayout searchPill(EditText field, int heightDp, final GradientDrawable[] bgOut) {
+        LinearLayout pill = new LinearLayout(this);
+        pill.setOrientation(LinearLayout.HORIZONTAL);
+        pill.setGravity(Gravity.CENTER_VERTICAL);
+        pill.setPadding(dp(14), 0, dp(12), 0);
+        final GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xFFFFFFFF, 0xFFF1F3FC});
+        bg.setCornerRadius(dp(heightDp / 2));
+        bg.setStroke(dp(2), 0xFF9DB7F5);
+        pill.setBackground(bg);
+        Fx.glow(pill, 3);
+
+        Glyph s = new Glyph(this, Glyph.SEARCH, Fx.NAVY, 18);
+        s.setClickable(false);
+        pill.addView(s, new LinearLayout.LayoutParams(dp(20), dp(20)));
+
+        field.setBackground(null);
+        field.setPadding(dp(10), 0, 0, 0);
+        field.setTextColor(0xFF1B2140);
+        field.setHintTextColor(0xFF7A8099);
+        field.setOnFocusChangeListener((v, focused) -> bg.setStroke(dp(2), focused ? Fx.GLOW : 0xFF9DB7F5));
+        pill.addView(field, new LinearLayout.LayoutParams(0, MATCH, 1f));
+        if (bgOut != null) bgOut[0] = bg;
+        return pill;
     }
 
     private void buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackgroundColor(Fx.SURFACE);
         root.setFitsSystemWindows(true);
+        root.setClipChildren(false);
 
         // ---- barra de guias (em cima)
         LinearLayout tabBar = new LinearLayout(this);
         tabBar.setOrientation(LinearLayout.HORIZONTAL);
-        tabBar.setBackgroundColor(0xFFDEE1E6);
+        tabBar.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Fx.TOP1, Fx.TOP2}));
         tabBar.setGravity(Gravity.CENTER_VERTICAL);
+        tabBar.setClipChildren(false);
 
         tabScroll = new HorizontalScrollView(this);
         tabScroll.setHorizontalScrollBarEnabled(false);
         tabStrip = new LinearLayout(this);
         tabStrip.setOrientation(LinearLayout.HORIZONTAL);
-        tabStrip.setPadding(dp(6), dp(6), 0, 0);
+        tabStrip.setPadding(dp(8), dp(6), 0, 0);
         tabScroll.addView(tabStrip, new FrameLayout.LayoutParams(WRAP, MATCH));
         tabBar.addView(tabScroll, new LinearLayout.LayoutParams(0, MATCH, 1f));
 
-        TextView plus = iconButton("+", 24, v -> newTab(null));
-        tabBar.addView(plus, new LinearLayout.LayoutParams(dp(44), MATCH));
-        root.addView(tabBar, new LinearLayout.LayoutParams(MATCH, dp(42)));
+        Glyph plus = new Glyph(this, Glyph.PLUS, Fx.NAVY, 22);
+        plus.setBackground(Fx.button(this, false));
+        Fx.glow(plus, 4);
+        plus.setOnClickListener(v -> newTab(null));
+        LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(dp(54), dp(36));
+        pl.setMargins(dp(4), 0, dp(10), 0);
+        tabBar.addView(plus, pl);
+        root.addView(tabBar, new LinearLayout.LayoutParams(MATCH, dp(50)));
 
         // ---- barra de endereço
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(dp(4), 0, dp(4), 0);
+        bar.setPadding(dp(6), 0, dp(6), 0);
+        bar.setClipChildren(false);
+        bar.setClipToPadding(false);
+        bar.setBackgroundColor(Fx.SURFACE);
+        bar.setElevation(dp(1));
 
-        btnBack = iconButton("‹", 30, v -> {
+        btnBack = roundButton(Glyph.BACK, Fx.NAVY, v -> {
             Tab t = curTab();
             if (!t.home && t.web.canGoBack()) t.web.goBack();
         });
-        btnFwd = iconButton("›", 30, v -> {
+        btnFwd = roundButton(Glyph.FWD, Fx.NAVY, v -> {
             Tab t = curTab();
             if (!t.home && t.web.canGoForward()) t.web.goForward();
         });
-        TextView btnReload = iconButton("⟳", 22, v -> {
+        Glyph btnReload = roundButton(Glyph.RELOAD, Fx.ACCENT, v -> {
             Tab t = curTab();
             if (!t.home) t.web.reload();
         });
 
         address = new EditText(this);
-        address.setBackground(rounded(0xFFF1F3F4, 20, 0));
-        address.setPadding(dp(14), 0, dp(14), 0);
         address.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         address.setSingleLine(true);
         address.setHint("Pesquisar ou digitar endereço");
@@ -223,25 +259,27 @@ public class MainActivity extends Activity {
             go(address.getText().toString());
             return true;
         });
+        LinearLayout addrPill = searchPill(address, 40, null);
 
-        btnStar = iconButton("☆", 22, v -> toggleBookmark());
-        TextView btnMenu = iconButton("⋮", 22, this::showMenu);
+        btnStar = roundButton(Glyph.STAR, Fx.NAVY, v -> toggleBookmark());
+        Glyph btnDl = roundButton(Glyph.DOWNLOAD, Fx.NAVY, v -> DownloadsUi.show(this));
+        Glyph btnMenu = roundButton(Glyph.DOTS, Fx.NAVY, this::showMenu);
 
-        bar.addView(btnBack, new LinearLayout.LayoutParams(dp(36), dp(44)));
-        bar.addView(btnFwd, new LinearLayout.LayoutParams(dp(36), dp(44)));
-        bar.addView(btnReload, new LinearLayout.LayoutParams(dp(40), dp(44)));
-        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(0, dp(38), 1f);
-        ap.setMargins(dp(2), 0, dp(2), 0);
-        bar.addView(address, ap);
-        bar.addView(btnStar, new LinearLayout.LayoutParams(dp(40), dp(44)));
-        bar.addView(new DownloadIconView(this, v -> DownloadsUi.show(this)), new LinearLayout.LayoutParams(dp(36), dp(44)));
-        bar.addView(btnMenu, new LinearLayout.LayoutParams(dp(36), dp(44)));
-        root.addView(bar, new LinearLayout.LayoutParams(MATCH, dp(48)));
+        bar.addView(btnBack, btnLp());
+        bar.addView(btnFwd, btnLp());
+        bar.addView(btnReload, btnLp());
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(0, dp(40), 1f);
+        ap.setMargins(dp(3), 0, dp(3), 0);
+        bar.addView(addrPill, ap);
+        bar.addView(btnStar, btnLp());
+        bar.addView(btnDl, btnLp());
+        bar.addView(btnMenu, btnLp());
+        root.addView(bar, new LinearLayout.LayoutParams(MATCH, dp(56)));
 
         // ---- progresso
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(100);
-        progress.setProgressTintList(ColorStateList.valueOf(BLUE));
+        progress.setProgressTintList(ColorStateList.valueOf(Fx.GLOW));
         progress.setVisibility(View.GONE);
         root.addView(progress, new LinearLayout.LayoutParams(MATCH, dp(3)));
 
@@ -259,31 +297,32 @@ public class MainActivity extends Activity {
     private void buildHome() {
         homeView = new ScrollView(this);
         homeView.setFillViewport(true);
-        homeView.setBackgroundColor(Color.WHITE);
+        homeView.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Fx.SURFACE, 0xFFFFFFFF}));
 
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER_HORIZONTAL);
         col.setPadding(dp(20), dp(72), dp(20), dp(24));
+        col.setClipChildren(false);
+        col.setClipToPadding(false);
 
         TextView logo = new TextView(this);
         logo.setText("Arbeon");
         logo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 46);
         logo.setTypeface(Typeface.DEFAULT_BOLD);
-        logo.setTextColor(BLUE);
+        logo.setTextColor(Fx.ACCENT);
         col.addView(logo, new LinearLayout.LayoutParams(WRAP, WRAP));
 
         TextView sub = new TextView(this);
         sub.setText("Pesquise com o Google");
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        sub.setTextColor(GRAY);
+        sub.setTextColor(0xFF5B6280);
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(WRAP, WRAP);
         sp.bottomMargin = dp(28);
         col.addView(sub, sp);
 
         homeSearch = new EditText(this);
-        homeSearch.setBackground(rounded(Color.WHITE, 26, 0xFFDADCE0));
-        homeSearch.setPadding(dp(20), 0, dp(20), 0);
         homeSearch.setHint("Pesquisar no Google ou digitar endereço");
         homeSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         homeSearch.setSingleLine(true);
@@ -292,12 +331,12 @@ public class MainActivity extends Activity {
             go(homeSearch.getText().toString());
             return true;
         });
-        col.addView(homeSearch, new LinearLayout.LayoutParams(MATCH, dp(52)));
+        col.addView(searchPill(homeSearch, 54, null), new LinearLayout.LayoutParams(MATCH, dp(54)));
 
         homeBmLabel = new TextView(this);
         homeBmLabel.setText("Favoritos");
         homeBmLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        homeBmLabel.setTextColor(GRAY);
+        homeBmLabel.setTextColor(0xFF5B6280);
         homeBmLabel.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
         lp.topMargin = dp(36);
@@ -305,6 +344,7 @@ public class MainActivity extends Activity {
 
         homeGrid = new GridLayout(this);
         homeGrid.setColumnCount(4);
+        homeGrid.setClipChildren(false);
         col.addView(homeGrid, new LinearLayout.LayoutParams(MATCH, WRAP));
 
         homeView.addView(col, new FrameLayout.LayoutParams(MATCH, WRAP));
@@ -326,16 +366,16 @@ public class MainActivity extends Activity {
             LinearLayout item = new LinearLayout(this);
             item.setOrientation(LinearLayout.VERTICAL);
             item.setGravity(Gravity.CENTER_HORIZONTAL);
+            item.setClipChildren(false);
 
             TextView circle = new TextView(this);
             circle.setText(title.substring(0, 1).toUpperCase());
             circle.setGravity(Gravity.CENTER);
             circle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-            circle.setTextColor(BLUE);
-            GradientDrawable oval = new GradientDrawable();
-            oval.setShape(GradientDrawable.OVAL);
-            oval.setColor(0xFFE8F0FE);
-            circle.setBackground(oval);
+            circle.setTypeface(Typeface.DEFAULT_BOLD);
+            circle.setTextColor(Fx.ACCENT);
+            circle.setBackground(Fx.button(this, true));
+            Fx.glow(circle, 4);
             item.addView(circle, new LinearLayout.LayoutParams(dp(52), dp(52)));
 
             TextView label = new TextView(this);
@@ -343,10 +383,10 @@ public class MainActivity extends Activity {
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            label.setTextColor(0xFF3C4043);
+            label.setTextColor(0xFF2B3350);
             label.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(MATCH, WRAP);
-            llp.topMargin = dp(6);
+            llp.topMargin = dp(8);
             item.addView(label, llp);
 
             item.setOnClickListener(v -> go(url));
@@ -424,24 +464,45 @@ public class MainActivity extends Activity {
             LinearLayout chip = new LinearLayout(this);
             chip.setOrientation(LinearLayout.HORIZONTAL);
             chip.setGravity(Gravity.CENTER_VERTICAL);
-            chip.setPadding(dp(12), 0, dp(2), 0);
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(sel ? Color.WHITE : 0xFFC8CCD2);
-            float r = dp(10);
-            bg.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
-            chip.setBackground(bg);
+            chip.setPadding(dp(12), 0, dp(4), 0);
+            float r = dp(sel ? 22 : 18);
+            float[] radii = {r, r, r, r, 0, 0, 0, 0};
+            if (sel) {
+                // aba ativa: fundo claro com a linha azul brilhante em cima
+                GradientDrawable glow = new GradientDrawable();
+                glow.setColor(Fx.GLOW);
+                glow.setCornerRadii(radii);
+                GradientDrawable face = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{0xFFFFFFFF, Fx.SURFACE});
+                face.setCornerRadii(radii);
+                LayerDrawable ld = new LayerDrawable(new Drawable[]{glow, face});
+                ld.setLayerInset(1, 0, dp(3), 0, 0);
+                chip.setBackground(ld);
+            } else {
+                GradientDrawable g = new GradientDrawable();
+                g.setColor(0x66FFFFFF);
+                g.setCornerRadii(radii);
+                chip.setBackground(g);
+            }
+
+            Glyph globe = new Glyph(this, Glyph.GLOBE, sel ? Fx.ACCENT : 0xFF8A90A8, 18);
+            globe.setClickable(false);
+            chip.addView(globe, new LinearLayout.LayoutParams(dp(22), dp(22)));
 
             TextView title = new TextView(this);
             title.setText(titleOf(t));
             title.setSingleLine(true);
             title.setEllipsize(TextUtils.TruncateAt.END);
-            title.setMaxWidth(dp(120));
-            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            title.setTextColor(sel ? 0xFF202124 : GRAY);
+            title.setMaxWidth(dp(110));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            title.setTypeface(sel ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            title.setTextColor(sel ? Fx.NAVY : 0xFF5B6280);
+            title.setPadding(dp(8), 0, dp(4), 0);
             t.chipTitle = title;
             chip.addView(title, new LinearLayout.LayoutParams(WRAP, WRAP));
 
-            TextView close = iconButton("✕", 12, v -> closeTab(t));
+            Glyph close = new Glyph(this, Glyph.CLOSE, 0xFF6B7390, 14);
+            close.setOnClickListener(v -> closeTab(t));
             chip.addView(close, new LinearLayout.LayoutParams(dp(30), dp(30)));
 
             chip.setOnClickListener(v -> {
@@ -450,7 +511,7 @@ public class MainActivity extends Activity {
             });
 
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(WRAP, MATCH);
-            cp.rightMargin = dp(3);
+            cp.rightMargin = dp(4);
             tabStrip.addView(chip, cp);
         }
     }
@@ -627,8 +688,7 @@ public class MainActivity extends Activity {
         if (cur < 0) return;
         Tab t = curTab();
         boolean on = !t.home && bookmarkIndex(t.url) >= 0;
-        btnStar.setText(on ? "★" : "☆");
-        btnStar.setTextColor(on ? 0xFFF9AB00 : GRAY);
+        btnStar.setOn(on);
     }
 
     private void toggleBookmark() {
@@ -659,7 +719,7 @@ public class MainActivity extends Activity {
     private void showBookmarks() {
         JSONArray a = loadBookmarks();
         if (a.length() == 0) {
-            toast("Nenhum favorito ainda. Toque na ☆ para adicionar.");
+            toast("Nenhum favorito ainda. Toque na ★ para adicionar.");
             return;
         }
         final String[] names = new String[a.length()];
@@ -670,7 +730,7 @@ public class MainActivity extends Activity {
             urls[i] = o == null ? "" : o.optString("url");
             names[i] = (TextUtils.isEmpty(title) ? urls[i] : title) + "\n" + urls[i];
         }
-        final AlertDialog d = new AlertDialog.Builder(this)
+        final AlertDialog d = new AlertDialog.Builder(this, DIALOG_THEME)
                 .setTitle("Favoritos (segure para remover)")
                 .setItems(names, (dd, which) -> go(urls[which]))
                 .setNegativeButton("Fechar", null)
@@ -691,37 +751,8 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------------ menu e configurações
 
     private void showMenu(View anchor) {
-        AppMenu.show(this, new Runnable[]{() -> newTab(null), this::showBookmarks, this::showSettings, this::sharePage, () -> DownloadsUi.show(this)});
-        if (true) return;
-        PopupMenu m = new PopupMenu(this, anchor);
-        m.getMenu().add(0, 1, 0, "Nova guia");
-        m.getMenu().add(0, 2, 1, "Favoritos");
-        m.getMenu().add(0, 3, 2, "Configurações");
-        m.getMenu().add(0, 4, 3, "Compartilhar página");
-        m.getMenu().add(0, 5, 4, "Downloads");
-        m.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case 1:
-                    newTab(null);
-                    break;
-                case 2:
-                    showBookmarks();
-                    break;
-                case 3:
-                    showSettings();
-                    break;
-                case 5:
-                    DownloadsUi.show(MainActivity.this);
-                    break;
-                case 4:
-                    sharePage();
-                    break;
-                default:
-                    break;
-            }
-            return true;
-        });
-        m.show();
+        AppMenu.show(this, new Runnable[]{() -> newTab(null), this::showBookmarks,
+                this::showSettings, this::sharePage, () -> DownloadsUi.show(this)});
     }
 
     private void sharePage() {
@@ -741,7 +772,7 @@ public class MainActivity extends Activity {
                 prefs.getBoolean("js", true),
                 prefs.getBoolean("desktop", false)
         };
-        new AlertDialog.Builder(this)
+        new AlertDialog.Builder(this, DIALOG_THEME)
                 .setTitle("Configurações")
                 .setMultiChoiceItems(new String[]{"Ativar JavaScript", "Modo desktop"},
                         checked, (d, which, isChecked) -> checked[which] = isChecked)

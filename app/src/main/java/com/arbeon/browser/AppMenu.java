@@ -47,7 +47,7 @@ final class AppMenu {
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(a, 20), dp(a, 22), dp(a, 20), dp(a, 20));
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xF7FFFFFF, 0xF2DCE1E9});
+                new int[]{0xF7FFFFFF, 0xF2E3E7F6});
         bg.setCornerRadius(dp(a, 30));
         bg.setStroke(dp(a, 2), 0xFFFFFFFF);
         panel.setBackground(bg);
@@ -59,7 +59,7 @@ final class AppMenu {
         title.setTypeface(cond);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
         title.setLetterSpacing(0.03f);
-        title.setTextColor(0xFF15161A);
+        title.setTextColor(0xFF0B1230);
         title.setPadding(dp(a, 4), 0, 0, dp(a, 14));
         panel.addView(title);
 
@@ -80,10 +80,8 @@ final class AppMenu {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dp(a, 20), dp(a, 14), dp(a, 16), dp(a, 14));
-            StateListDrawable sl = new StateListDrawable();
-            sl.addState(new int[]{android.R.attr.state_pressed}, pill(a, 0xFFE3E7EF));
-            sl.addState(new int[]{}, pill(a, 0xD9FFFFFF));
-            row.setBackground(sl);
+            row.setBackground(Fx.button(a, false));
+            Fx.glow(row, 3);
             row.setClickable(true);
 
             LinearLayout texts = new LinearLayout(a);
@@ -94,7 +92,7 @@ final class AppMenu {
             name.setTypeface(cond);
             name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
             name.setLetterSpacing(0.02f);
-            name.setTextColor(0xFF15161A);
+            name.setTextColor(0xFF0B1230);
             texts.addView(name);
 
             if (sub != null) {
