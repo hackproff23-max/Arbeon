@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -27,11 +28,13 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
  * Barra de endereço expandida (como no Chrome): ao tocar na barra, abre em tela cheia com o
- * campo em cima, a página atual (copiar/compartilhar), o texto copiado e sugestões do histórico.
+ * campo em cima, a página atual (copiar/compartilhar), o texto copiado, as buscas recentes
+ * (até 25, com X para apagar uma e lixeira para apagar todas) e sugestões do histórico.
  */
 final class AddressBar {
     interface Host {
@@ -192,6 +195,53 @@ final class AddressBar {
         return row;
     }
 
+    /** Linha de busca recente: relógio, texto e X para apagar só esta busca. */
+    private static void searchRow(Activity a, LinearLayout list, String q,
+                                  View.OnClickListener open, View.OnClickListener del) {
+        LinearLayout r = row(a, list, Glyph.HISTORY, q, null, Fx.MUTED, open);
+        Glyph x = new Glyph(a, Glyph.CLOSE, Fx.MUTED, 16);
+        x.setContentDescription("Apagar esta busca");
+        x.setOnClickListener(del);
+        r.addView(x, new LinearLayout.LayoutParams(dp(a, 40), dp(a, 40)));
+    }
+
+    /** Título da seção com a lixeira (apagar todas) à direita. */
+    private static void sectionHeader(Activity a, LinearLayout list, String label,
+                                      View.OnClickListener onTrash) {
+        LinearLayout h = new LinearLayout(a);
+        h.setOrientation(LinearLayout.HORIZONTAL);
+        h.setGravity(Gravity.CENTER_VERTICAL);
+        h.setPadding(dp(a, 6), 0, 0, 0);
+        TextView tv = new TextView(a);
+        tv.setText(label);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        tv.setTextColor(Fx.MUTED);
+        tv.setTypeface(Typeface.DEFAULT_BOLD);
+        h.addView(tv, new LinearLayout.LayoutParams(0, WRAP, 1f));
+        Glyph trash = new Glyph(a, Glyph.TRASH, Fx.MUTED, 20);
+        trash.setContentDescription("Apagar todas as buscas");
+        trash.setOnClickListener(onTrash);
+        h.addView(trash, new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
+        lp.topMargin = dp(a, 12);
+        list.addView(h, lp);
+    }
+
+    private static void confirmClearSearches(final Activity a, final Dialog d,
+                                             final LinearLayout list, final String text,
+                                             final String url, final String title,
+                                             final Host host) {
+        new ArbeonDialog(a)
+                .setTitle("Apagar histórico de buscas?")
+                .setMessage("Todas as buscas recentes serão removidas.")
+                .setPositiveButton("Apagar", (x, y) -> {
+                    SearchStore.clear(a);
+                    render(a, d, list, text, url, title, host);
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
     private static String clip(Activity a) {
         try {
             ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -205,8 +255,9 @@ final class AddressBar {
         return null;
     }
 
-    private static void render(final Activity a, final Dialog d, LinearLayout list, String text,
-                               final String url, String title, final Host host) {
+    private static void render(final Activity a, final Dialog d, final LinearLayout list,
+                               final String text, final String url, final String title,
+                               final Host host) {
         list.removeAllViews();
         String q = text.trim();
         boolean empty = q.isEmpty() || q.equals(url);
@@ -247,6 +298,25 @@ final class AddressBar {
                     host.go(cb);
                 });
             }
+
+            // ---- buscas recentes (até 25): X apaga uma, lixeira apaga todas
+            final List<String> recents = SearchStore.list(a);
+            if (!recents.isEmpty()) {
+                sectionHeader(a, list, "Buscas recentes",
+                        v -> confirmClearSearches(a, d, list, text, url, title, host));
+                for (int j = 0; j < recents.size(); j++) {
+                    final String s = recents.get(j);
+                    final int idx = j;
+                    searchRow(a, list, s, v -> {
+                        d.dismiss();
+                        host.go(s);
+                    }, v -> {
+                        SearchStore.remove(a, idx);
+                        render(a, d, list, text, url, title, host);
+                    });
+                }
+            }
+
             int n = 0;
             for (int i = 0; i < hist.length() && n < 6; i++) {
                 JSONObject o = hist.optJSONObject(i);
@@ -267,6 +337,24 @@ final class AddressBar {
                 host.go(qq);
             });
             String low = q.toLowerCase(Locale.ROOT);
+
+            // buscas recentes que combinam com o que está sendo digitado
+            final List<String> rc = SearchStore.list(a);
+            int sn = 0;
+            for (int j = 0; j < rc.size() && sn < 5; j++) {
+                final String s = rc.get(j);
+                final int idx = j;
+                if (s.equalsIgnoreCase(qq) || !s.toLowerCase(Locale.ROOT).contains(low)) continue;
+                searchRow(a, list, s, v -> {
+                    d.dismiss();
+                    host.go(s);
+                }, v -> {
+                    SearchStore.remove(a, idx);
+                    render(a, d, list, text, url, title, host);
+                });
+                sn++;
+            }
+
             int n = 0;
             for (int i = 0; i < hist.length() && n < 6; i++) {
                 JSONObject o = hist.optJSONObject(i);

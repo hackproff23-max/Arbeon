@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
     private static final String DESKTOP_UA =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/124.0.0.0 Safari/537.36";
+    private static final String GOOGLE_SEARCH = "https://www.google.com/search?q=";
 
     private static class Tab {
         WebView web;
@@ -95,7 +96,12 @@ public class MainActivity extends Activity {
         buildUi();
         Fx.styleWindow(this);
         WebPrefs.applyBars(this);
-        newTab(getIntent() != null ? getIntent().getDataString() : null);
+        String start = getIntent() != null ? getIntent().getDataString() : null;
+        if (start == null || start.isEmpty()) {
+            // sem link de fora: volta para o último site visitado
+            start = prefs.getString("last_url", null);
+        }
+        newTab(start);
     }
 
     @Override
@@ -109,6 +115,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         for (Tab t : tabs) t.web.onPause();
+        saveLastUrl();
     }
 
     @Override
@@ -142,6 +149,22 @@ public class MainActivity extends Activity {
             closeTab(t);
         } else {
             super.onBackPressed();
+        }
+    }
+
+    /** Guarda o último site aberto para reabrir nele quando o app for aberto de novo. */
+    private void rememberUrl(String url) {
+        if (url == null || url.isEmpty() || url.startsWith("about:") || url.startsWith("data:")) return;
+        prefs.edit().putString("last_url", url).apply();
+    }
+
+    private void saveLastUrl() {
+        try {
+            if (cur >= 0 && cur < tabs.size()) {
+                Tab t = curTab();
+                if (!t.home) rememberUrl(t.url);
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -580,12 +603,16 @@ public class MainActivity extends Activity {
         if (!in.contains(" ") && (in.contains(".") || in.startsWith("localhost"))) {
             return "https://" + in;
         }
-        return "https://www.google.com/search?q=" + Uri.encode(in);
+        return GOOGLE_SEARCH + Uri.encode(in);
     }
 
     private void go(String input) {
         String u = toUrl(input);
         if (u == null) return;
+        // texto que virou pesquisa no Google entra no histórico de buscas (até 25)
+        if (u.startsWith(GOOGLE_SEARCH) && !input.trim().startsWith("http")) {
+            SearchStore.add(this, input.trim());
+        }
         hideKeyboard();
         Tab t = curTab();
         t.home = false;
@@ -690,6 +717,7 @@ public class MainActivity extends Activity {
                 t.url = url;
                 HistoryStore.add(MainActivity.this, view.getTitle(), url);
                 if (isCur(t)) {
+                    rememberUrl(url);
                     if (!address.hasFocus()) address.setText(url);
                     updateStar();
                     updateNav();
@@ -917,6 +945,8 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().flush();
         WebStorage.getInstance().deleteAllData();
         HistoryStore.clear(this);
+        SearchStore.clear(this);
+        prefs.edit().remove("last_url").apply();
         for (Tab t : tabs) {
             t.web.clearCache(true);
             t.web.clearHistory();
