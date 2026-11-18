@@ -733,34 +733,22 @@ public class MainActivity extends Activity {
     }
 
     private void showBookmarks() {
-        JSONArray a = loadBookmarks();
-        if (a.length() == 0) {
-            toast("Nenhum favorito ainda. Toque na ★ para adicionar.");
-            return;
-        }
-        final String[] names = new String[a.length()];
-        final String[] urls = new String[a.length()];
-        for (int i = 0; i < a.length(); i++) {
-            JSONObject o = a.optJSONObject(i);
-            String title = o == null ? "" : o.optString("title");
-            urls[i] = o == null ? "" : o.optString("url");
-            names[i] = (TextUtils.isEmpty(title) ? urls[i] : title) + "\n" + urls[i];
-        }
-        final AlertDialog d = new AlertDialog.Builder(this, DIALOG_THEME)
-                .setTitle("Favoritos (segure para remover)")
-                .setItems(names, (dd, which) -> go(urls[which]))
-                .setNegativeButton("Fechar", null)
-                .create();
-        d.show();
-        d.getListView().setOnItemLongClickListener((parent, view, pos, id) -> {
-            JSONArray b = loadBookmarks();
-            b.remove(pos);
-            saveBookmarks(b);
-            d.dismiss();
-            updateStar();
-            if (curTab().home) refreshHome();
-            toast("Favorito removido");
-            return true;
+        BookmarksUi.show(this, prefs, new BookmarksUi.Host() {
+            @Override
+            public void open(String url) {
+                go(url);
+            }
+
+            @Override
+            public void openNewTab(String url) {
+                newTab(url);
+            }
+
+            @Override
+            public void changed() {
+                updateStar();
+                if (curTab().home) refreshHome();
+            }
         });
     }
 
