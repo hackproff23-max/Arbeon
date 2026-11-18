@@ -93,6 +93,7 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences("arbeon", MODE_PRIVATE);
         Fx.init(this);
         buildUi();
+        Fx.styleWindow(this);
         newTab(getIntent() != null ? getIntent().getDataString() : null);
     }
 
@@ -179,7 +180,7 @@ public class MainActivity extends Activity {
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(14), 0, dp(12), 0);
         final GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFF1F3FC});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         bg.setCornerRadius(dp(heightDp / 2));
         bg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(bg);
@@ -191,8 +192,8 @@ public class MainActivity extends Activity {
 
         field.setBackground(null);
         field.setPadding(dp(10), 0, 0, 0);
-        field.setTextColor(0xFF1B2140);
-        field.setHintTextColor(0xFF7A8099);
+        field.setTextColor(Fx.NAVY);
+        field.setHintTextColor(Fx.HINT);
         field.setOnFocusChangeListener((v, focused) -> bg.setStroke(dp(2), focused ? Fx.GLOW : Fx.BORDER));
         pill.addView(field, new LinearLayout.LayoutParams(0, MATCH, 1f));
         if (bgOut != null) bgOut[0] = bg;
@@ -313,7 +314,7 @@ public class MainActivity extends Activity {
         homeView = new ScrollView(this);
         homeView.setFillViewport(true);
         homeView.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Fx.SURFACE, 0xFFFFFFFF}));
+                new int[]{Fx.SURFACE, Fx.WHITE}));
 
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
@@ -324,6 +325,7 @@ public class MainActivity extends Activity {
 
         android.widget.ImageView logo = new android.widget.ImageView(this);
         logo.setImageResource(R.drawable.arbeon_logo);
+        Fx.tintLogo(logo);
         logo.setAdjustViewBounds(true);
         logo.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
         LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(290), WRAP);
@@ -333,7 +335,7 @@ public class MainActivity extends Activity {
         TextView sub = new TextView(this);
         sub.setText("Pesquise com o Google");
         sub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        sub.setTextColor(0xFF5B6280);
+        sub.setTextColor(Fx.MUTED);
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(WRAP, WRAP);
         sp.bottomMargin = dp(28);
         col.addView(sub, sp);
@@ -352,7 +354,7 @@ public class MainActivity extends Activity {
         homeBmLabel = new TextView(this);
         homeBmLabel.setText("Favoritos");
         homeBmLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        homeBmLabel.setTextColor(0xFF5B6280);
+        homeBmLabel.setTextColor(Fx.MUTED);
         homeBmLabel.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(MATCH, WRAP);
         lp.topMargin = dp(36);
@@ -399,7 +401,7 @@ public class MainActivity extends Activity {
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            label.setTextColor(0xFF2B3350);
+            label.setTextColor(Fx.TEXT2);
             label.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(MATCH, WRAP);
             llp.topMargin = dp(8);
@@ -489,7 +491,7 @@ public class MainActivity extends Activity {
                 glow.setColor(Fx.GLOW);
                 glow.setCornerRadii(radii);
                 GradientDrawable face = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                        new int[]{0xFFFFFFFF, Fx.SURFACE});
+                        new int[]{Fx.WHITE, Fx.SURFACE});
                 face.setCornerRadii(radii);
                 LayerDrawable ld = new LayerDrawable(new Drawable[]{glow, face});
                 ld.setLayerInset(1, 0, dp(3), 0, 0);
@@ -501,7 +503,7 @@ public class MainActivity extends Activity {
                 chip.setBackground(g);
             }
 
-            Glyph globe = new Glyph(this, Glyph.GLOBE, sel ? Fx.ACCENT : 0xFF8A90A8, 18);
+            Glyph globe = new Glyph(this, Glyph.GLOBE, sel ? Fx.ACCENT : Fx.MUTED, 18);
             globe.setClickable(false);
             chip.addView(globe, new LinearLayout.LayoutParams(dp(22), dp(22)));
 
@@ -512,12 +514,12 @@ public class MainActivity extends Activity {
             title.setMaxWidth(dp(110));
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             title.setTypeface(sel ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            title.setTextColor(sel ? Fx.NAVY : 0xFF5B6280);
+            title.setTextColor(sel ? Fx.NAVY : Fx.MUTED);
             title.setPadding(dp(8), 0, dp(4), 0);
             t.chipTitle = title;
             chip.addView(title, new LinearLayout.LayoutParams(WRAP, WRAP));
 
-            Glyph close = new Glyph(this, Glyph.CLOSE, 0xFF6B7390, 14);
+            Glyph close = new Glyph(this, Glyph.CLOSE, Fx.MUTED, 14);
             close.setOnClickListener(v -> closeTab(t));
             chip.addView(close, new LinearLayout.LayoutParams(dp(30), dp(30)));
 

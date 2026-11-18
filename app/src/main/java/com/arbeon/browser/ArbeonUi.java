@@ -25,7 +25,7 @@ final class ArbeonUi {
             t.setMaxWidth(Fx.dp(c, 320));
             t.setPadding(Fx.dp(c, 22), Fx.dp(c, 12), Fx.dp(c, 22), Fx.dp(c, 12));
             GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                    new int[]{0xFFFFFFFF, 0xFFE8EBF7});
+                    new int[]{Fx.WHITE, Fx.FACE});
             boolean multi = msg.length() > 36 || msg.toString().contains("\n");
             g.setCornerRadius(Fx.dp(c, multi ? 26 : 100));
             g.setStroke(Fx.dp(c, 2), Fx.BORDER);
@@ -44,13 +44,13 @@ final class ArbeonUi {
     static void styleField(EditText e) {
         Context c = e.getContext();
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFEEF2FF});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         g.setCornerRadius(Fx.dp(c, 24));
         g.setStroke(Fx.dp(c, 2), Fx.BORDER);
         e.setBackground(g);
         e.setPadding(Fx.dp(c, 18), Fx.dp(c, 12), Fx.dp(c, 18), Fx.dp(c, 12));
         e.setTextColor(Fx.NAVY);
-        e.setHintTextColor(0xFF7A8099);
+        e.setHintTextColor(Fx.HINT);
         e.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
     }
 }

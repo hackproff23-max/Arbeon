@@ -100,6 +100,10 @@ final class Glyph extends View {
                 c.drawPath(path, p);
                 break;
             case RELOAD: {
+                ReloadIcon.draw(c, u, p, f);
+                break;
+            }
+            case 99: {
                 rect.set(5 * u, 5 * u, 19 * u, 19 * u);
                 c.drawArc(rect, 200, 140, false, p);
                 c.drawArc(rect, 20, 140, false, p);

@@ -339,7 +339,7 @@ final class DownloadsUi {
                     path.lineTo(6 * u, 22 * u);
                     path.close();
                     c.drawPath(path, f);
-                    f.setColor(0xFFFFFFFF);
+                    f.setColor(Fx.WHITE);
                     f.setAlpha(110);
                     path.reset();
                     path.moveTo(14 * u, 2 * u);
@@ -408,7 +408,7 @@ final class DownloadsUi {
             p.setColor(0xFF1F5FF0);
             r.set(cx - 72 * u, 112 * u, cx + 72 * u, 158 * u);
             c.drawRoundRect(r, 20 * u, 20 * u, p);
-            p.setColor(0xFFFFFFFF);
+            p.setColor(Fx.WHITE);
             r.set(cx - 72 * u, 106 * u, cx + 72 * u, 152 * u);
             c.drawRoundRect(r, 20 * u, 20 * u, p);
             p.setColor(0xFF2A6BFF);
@@ -472,7 +472,7 @@ final class DownloadsUi {
         t.setPadding(dp(c, 28), dp(c, 14), dp(c, 28), dp(c, 14));
         GradientDrawable g = new GradientDrawable();
         g.setCornerRadius(dp(c, 28));
-        g.setColor(0xFFEEF2FF);
+        g.setColor(Fx.FIELD2);
         g.setStroke(dp(c, 1), 0xFFDDE4F8);
         t.setBackground(Fx.button(c, false)); Fx.glow(t, 3);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
@@ -640,7 +640,7 @@ final class DownloadsUi {
                     cb.setStroke(dp(a, 2), ACCENT);
                 } else {
                     cb.setColor(0xFFF7F9FF);
-                    cb.setStroke(dp(a, 1), 0xFFD3DBF2);
+                    cb.setStroke(dp(a, 1), Fx.TOP1);
                 }
                 chip.setBackground(cb);
                 Ic ci = new Ic(a, sel ? Ic.CHECK : CHIP_ICON[i], sel ? ACCENT : NAVY, 20);

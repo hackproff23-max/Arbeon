@@ -86,13 +86,20 @@ final class SettingsUi {
         });
         showMain();
         Window w = d.getWindow();
-        if (w != null) {
-            w.setLayout(MATCH, MATCH);
-            w.setStatusBarColor(Fx.SURFACE);
-            w.setNavigationBarColor(Fx.TOP2);
-            w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
+        if (w != null) w.setLayout(MATCH, MATCH);
+        styleDialogWindow();
         d.show();
+    }
+
+    private void styleDialogWindow() {
+        Window w = d.getWindow();
+        if (w == null) return;
+        w.setStatusBarColor(Fx.SURFACE);
+        w.setNavigationBarColor(Fx.TOP2);
+        View dec = w.getDecorView();
+        int f = dec.getSystemUiVisibility();
+        dec.setSystemUiVisibility(Fx.dark ? (f & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+                : (f | (Fx.dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)));
     }
 
     // ------------------------------------------------------------------ tela principal
@@ -107,7 +114,7 @@ final class SettingsUi {
         field.setSingleLine(true);
         field.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         field.setTextColor(Fx.NAVY);
-        field.setHintTextColor(0xFF7A8099);
+        field.setHintTextColor(Fx.HINT);
         field.setBackground(null);
         field.setPadding(dp(12), 0, 0, 0);
 
@@ -116,14 +123,14 @@ final class SettingsUi {
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(7), 0, dp(16), 0);
         GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFF1F3FC});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         pbg.setCornerRadius(dp(100));
         pbg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(pbg);
         Fx.glow(pill, 4);
         Glyph lupa = new Glyph(a, Glyph.SEARCH, Fx.NAVY, 20);
         lupa.setClickable(false);
-        lupa.setBackground(circle(0xFFFFFFFF));
+        lupa.setBackground(circle(Fx.WHITE));
         Fx.glow(lupa, 2);
         pill.addView(lupa, new LinearLayout.LayoutParams(dp(44), dp(44)));
         pill.addView(field, new LinearLayout.LayoutParams(0, MATCH, 1f));
@@ -199,7 +206,7 @@ final class SettingsUi {
             t.setText("Nenhuma configuração encontrada");
             t.setGravity(Gravity.CENTER);
             t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-            t.setTextColor(0xFF5B6280);
+            t.setTextColor(Fx.MUTED);
             list.addView(t, lp(MATCH, 0, 40));
         }
     }
@@ -254,18 +261,60 @@ final class SettingsUi {
         prefs.edit().putInt("theme_hue", hue).apply();
         Fx.setHue(hue);
         themeChanged = true;
-        Window w = d.getWindow();
-        if (w != null) {
-            w.setStatusBarColor(Fx.SURFACE);
-            w.setNavigationBarColor(Fx.TOP2);
-        }
+        styleDialogWindow();
+    }
+
+    private void applyMode(int mode) {
+        prefs.edit().putInt("theme_mode", mode).apply();
+        Fx.init(a);
+        themeChanged = true;
+        styleDialogWindow();
     }
 
     private void showAppearance() {
         LinearLayout list = beginSub("Aparência");
         final int cur = prefs.getInt("theme_hue", -1);
 
-        list.addView(note("Escolha a cor do Arbeon. Vale para botões, abas, barras, brilhos e ícones."), rowLp(4));
+        list.addView(note("Escolha o tema e a cor do Arbeon. Vale para botões, abas, barras, brilhos, ícones e o logo."), rowLp(4));
+
+        // ---- tema: claro / escuro / sistema
+        list.addView(sectionLabel("Tema"), sectionLp());
+        final int mode = prefs.getInt("theme_mode", 0);
+        String[] modeNames = {"Claro", "Escuro", "Sistema"};
+        LinearLayout modes = new LinearLayout(a);
+        modes.setOrientation(LinearLayout.HORIZONTAL);
+        modes.setClipChildren(false);
+        modes.setPadding(0, dp(12), 0, dp(4));
+        for (int i = 0; i < 3; i++) {
+            final int m = i;
+            boolean sel = i == mode;
+            TextView t = new TextView(a);
+            t.setText(modeNames[i]);
+            t.setGravity(Gravity.CENTER);
+            t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            t.setTypeface(Typeface.DEFAULT_BOLD);
+            if (sel) {
+                GradientDrawable sg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{Fx.GLOW, Fx.ACCENT});
+                sg.setCornerRadius(dp(100));
+                t.setBackground(sg);
+                t.setTextColor(0xFFFFFFFF);
+            } else {
+                t.setBackground(Fx.button(a, false));
+                t.setTextColor(Fx.NAVY);
+            }
+            Fx.glow(t, sel ? 5 : 3);
+            t.setClickable(true);
+            t.setOnClickListener(v -> {
+                applyMode(m);
+                showAppearance();
+            });
+            LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(0, dp(48), 1f);
+            mp.leftMargin = dp(4);
+            mp.rightMargin = dp(4);
+            modes.addView(t, mp);
+        }
+        list.addView(modes, lp(MATCH, 0, 0));
 
         // ---- prévia
         LinearLayout prev = new LinearLayout(a);
@@ -273,7 +322,7 @@ final class SettingsUi {
         prev.setGravity(Gravity.CENTER_VERTICAL);
         prev.setPadding(dp(14), dp(14), dp(14), dp(14));
         GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, Fx.FACE});
+                new int[]{Fx.WHITE, Fx.FACE});
         pbg.setCornerRadius(dp(28));
         pbg.setStroke(dp(2), Fx.BORDER);
         prev.setBackground(pbg);
@@ -396,7 +445,7 @@ final class SettingsUi {
             c.drawRoundRect(r, h * 0.22f, h * 0.22f, p);
             p.setShader(null);
             float x = pad + (w - 2 * pad) * (hue / 359f);
-            p.setColor(0xFFFFFFFF);
+            p.setColor(Fx.WHITE);
             c.drawCircle(x, h / 2f, h * 0.42f, p);
             p.setColor(Color.HSVToColor(new float[]{hue, 0.84f, 0.92f}));
             c.drawCircle(x, h / 2f, h * 0.30f, p);
@@ -522,7 +571,7 @@ final class SettingsUi {
         t.setGravity(Gravity.CENTER_VERTICAL);
         t.setPadding(dp(32), dp(10), dp(22), dp(10));
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, Fx.TOP2});
+                new int[]{Fx.WHITE, Fx.TOP2});
         g.setCornerRadius(dp(100));
         t.setBackground(g);
         Fx.glow(t, 3);
@@ -539,7 +588,7 @@ final class SettingsUi {
         TextView t = new TextView(a);
         t.setText(text);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        t.setTextColor(0xFF5B6280);
+        t.setTextColor(Fx.MUTED);
         t.setPadding(dp(8), 0, dp(8), 0);
         return t;
     }
@@ -579,7 +628,7 @@ final class SettingsUi {
         r.setClickable(true);
 
         SIcon ic = new SIcon(a, icon, Fx.NAVY, 24);
-        ic.setBackground(circle(0xFFFFFFFF));
+        ic.setBackground(circle(Fx.WHITE));
         Fx.glow(ic, 2);
         r.addView(ic, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
@@ -595,7 +644,7 @@ final class SettingsUi {
             TextView s = new TextView(a);
             s.setText(sub);
             s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            s.setTextColor(0xFF5B6280);
+            s.setTextColor(Fx.MUTED);
             texts.addView(s, new LinearLayout.LayoutParams(MATCH, WRAP));
         }
         r.addView(texts, new LinearLayout.LayoutParams(0, WRAP, 1f));
@@ -632,7 +681,7 @@ final class SettingsUi {
             g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{Fx.GLOW, Fx.ACCENT});
         } else {
             g = new GradientDrawable();
-            g.setColor(0xFFC9D3EE);
+            g.setColor(Fx.PRESS2);
         }
         g.setCornerRadius(dp(100));
         track.setBackground(g);

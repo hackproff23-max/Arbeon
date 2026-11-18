@@ -29,7 +29,7 @@ final class AppMenu {
     }
 
     private static Glyph round(Activity a, int type, int size, boolean enabled, boolean on) {
-        Glyph g = new Glyph(a, type, enabled ? Fx.NAVY : 0xFF9AA0B5, 22);
+        Glyph g = new Glyph(a, type, enabled ? Fx.NAVY : Fx.HINT, 22);
         g.setOn(on);
         if (enabled) {
             g.setBackground(Fx.button(a, true));
@@ -37,7 +37,7 @@ final class AppMenu {
         } else {
             GradientDrawable gd = new GradientDrawable();
             gd.setShape(GradientDrawable.OVAL);
-            gd.setColor(0xFFE3E5EC);
+            gd.setColor(Fx.FACE);
             g.setBackground(gd);
             g.setClickable(false);
         }
@@ -60,9 +60,9 @@ final class AppMenu {
         panel.setClipToPadding(false);
         panel.setPadding(dp(a, 16), dp(a, 16), dp(a, 16), dp(a, 10));
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFF1F3FC});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         bg.setCornerRadius(dp(a, 28));
-        bg.setStroke(dp(a, 2), 0xFFB9CCF7);
+        bg.setStroke(dp(a, 2), Fx.BORDER2);
         panel.setBackground(bg);
         Fx.glow(panel, 10);
         wrap.addView(panel, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
@@ -125,7 +125,7 @@ final class AppMenu {
 
     private static View divider(Activity a) {
         View v = new View(a);
-        v.setBackgroundColor(0xFFD3DBF2);
+        v.setBackgroundColor(Fx.TOP1);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 1));
         lp.setMargins(dp(a, 4), dp(a, 6), dp(a, 4), dp(a, 6));

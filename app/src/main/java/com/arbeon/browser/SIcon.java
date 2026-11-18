@@ -33,10 +33,10 @@ final class SIcon extends View {
         p.setStrokeJoin(Paint.Join.ROUND);
         f.setStyle(Paint.Style.FILL);
         w.setStyle(Paint.Style.FILL);
-        w.setColor(0xFFFFFFFF);
+        w.setColor(Fx.WHITE);
         wp.setStyle(Paint.Style.STROKE);
         wp.setStrokeCap(Paint.Cap.ROUND);
-        wp.setColor(0xFFFFFFFF);
+        wp.setColor(Fx.WHITE);
     }
 
     @Override
@@ -47,6 +47,8 @@ final class SIcon extends View {
         c.translate((getWidth() - size) / 2f, (getHeight() - size) / 2f);
         p.setColor(color);
         f.setColor(color);
+        w.setColor(Fx.WHITE);
+        wp.setColor(Fx.WHITE);
         p.setStrokeWidth(2.3f * u);
 
         switch (type) {

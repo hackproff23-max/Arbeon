@@ -174,7 +174,7 @@ final class BookmarksUi {
         root.setClipChildren(false);
         root.setClipToPadding(false);
         root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFF4F6FF, 0xFFE9EEFF}));
+                new int[]{Fx.SURFACE, Fx.CARD2}));
 
         // ---- cabeçalho
         LinearLayout head = new LinearLayout(a);
@@ -222,7 +222,7 @@ final class BookmarksUi {
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding(dp(16), 0, dp(14), 0);
         final GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFEEF2FF});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         pbg.setCornerRadius(dp(30));
         pbg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(pbg);
@@ -232,7 +232,7 @@ final class BookmarksUi {
         pill.addView(lupa, new LinearLayout.LayoutParams(dp(24), dp(24)));
         search = new EditText(a);
         search.setHint("Pesquise nos seus favoritos");
-        search.setHintTextColor(0xFF5B6280);
+        search.setHintTextColor(Fx.MUTED);
         search.setTextColor(Fx.NAVY);
         search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         search.setSingleLine(true);
@@ -293,7 +293,7 @@ final class BookmarksUi {
         empty.addView(emptyTitle, etp);
         emptySub = new TextView(a);
         emptySub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        emptySub.setTextColor(0xFF2B3350);
+        emptySub.setTextColor(Fx.TEXT2);
         emptySub.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams esp = new LinearLayout.LayoutParams(WRAP, WRAP);
         esp.topMargin = dp(14);
@@ -311,14 +311,14 @@ final class BookmarksUi {
 
         Window w = dialog.getWindow();
         if (w != null) {
-            w.setBackgroundDrawable(new ColorDrawable(0xFFF4F6FF));
+            w.setBackgroundDrawable(new ColorDrawable(Fx.SURFACE));
             w.setLayout(MATCH, MATCH);
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
             if (Build.VERSION.SDK_INT >= 23) {
-                w.setStatusBarColor(0xFFF4F6FF);
+                w.setStatusBarColor(Fx.SURFACE);
                 View dec = w.getDecorView();
                 dec.setSystemUiVisibility(dec.getSystemUiVisibility()
-                        | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                        | (Fx.dark ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR));
             }
         }
         render();
@@ -418,7 +418,7 @@ final class BookmarksUi {
         TextView ss = new TextView(a);
         ss.setText(sub);
         ss.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        ss.setTextColor(0xFF5B6280);
+        ss.setTextColor(Fx.MUTED);
         ss.setSingleLine(true);
         ss.setEllipsize(TextUtils.TruncateAt.END);
         col.addView(ss, new LinearLayout.LayoutParams(MATCH, WRAP));
@@ -683,7 +683,7 @@ final class BookmarksUi {
             p.setShader(null);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(2 * d);
-            p.setColor(0xFFFFFFFF);
+            p.setColor(Fx.WHITE);
             c.drawRoundRect(r, 20 * d, 20 * d, p);
 
             // estrelinha na pasta

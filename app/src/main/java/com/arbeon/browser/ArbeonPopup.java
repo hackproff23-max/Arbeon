@@ -79,9 +79,9 @@ final class ArbeonPopup {
         final PopupWindow pw = new PopupWindow(box, ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, true);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFEEF2FF});
+                new int[]{Fx.WHITE, Fx.FIELD2});
         bg.setCornerRadius(dp(24));
-        bg.setStroke(dp(2), 0xFFB9CCF7);
+        bg.setStroke(dp(2), Fx.BORDER2);
         pw.setBackgroundDrawable(bg);
         pw.setOutsideTouchable(true);
         pw.setElevation(dp(12));
