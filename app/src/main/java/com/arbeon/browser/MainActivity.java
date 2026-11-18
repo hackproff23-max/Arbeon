@@ -811,27 +811,14 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        final boolean[] checked = {
-                prefs.getBoolean("js", true),
-                prefs.getBoolean("desktop", false)
-        };
-        new AlertDialog.Builder(this, DIALOG_THEME)
-                .setTitle("Configurações")
-                .setMultiChoiceItems(new String[]{"Ativar JavaScript", "Modo desktop"},
-                        checked, (d, which, isChecked) -> checked[which] = isChecked)
-                .setPositiveButton("Salvar", (d, w) -> {
-                    prefs.edit()
-                            .putBoolean("js", checked[0])
-                            .putBoolean("desktop", checked[1])
-                            .apply();
+        SettingsDialog.show(this, prefs.getBoolean("js", true), prefs.getBoolean("desktop", false),
+                (js, desktop) -> {
+                    prefs.edit().putBoolean("js", js).putBoolean("desktop", desktop).apply();
                     for (Tab t : tabs) applySettings(t.web);
                     Tab c = curTab();
                     if (!c.home) c.web.reload();
                     toast("Configurações salvas");
-                })
-                .setNeutralButton("Limpar dados", (d, w) -> clearData())
-                .setNegativeButton("Cancelar", null)
-                .show();
+                }, this::clearData);
     }
 
     private void clearData() {
