@@ -661,6 +661,20 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
+                try {
+                    if (!req.isForMainFrame() && AdBlock.enabled(MainActivity.this)
+                            && AdBlock.isBlocked(req.getUrl().getHost())) {
+                        AdBlock.blocked.incrementAndGet();
+                        return new android.webkit.WebResourceResponse("text/plain", "utf-8",
+                                new java.io.ByteArrayInputStream(new byte[0]));
+                    }
+                } catch (Exception ignored) {
+                }
+                return super.shouldInterceptRequest(view, req);
+            }
+
+            @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 t.url = url;
                 t.home = false;
@@ -825,7 +839,8 @@ public class MainActivity extends Activity {
         boolean back = !t.home && t.web.canGoBack();
         boolean fwd = !t.home && t.web.canGoForward();
         boolean starred = !t.home && bookmarkIndex(t.url) >= 0;
-        AppMenu.show(this, back, fwd, starred, prefs.getBoolean("desktop", false), new Runnable[]{
+        AppMenu.show(this, back, fwd, starred, prefs.getBoolean("desktop", false),
+                AdBlock.enabled(this), new Runnable[]{
                 () -> { if (!t.home && t.web.canGoBack()) t.web.goBack(); },
                 () -> { if (!t.home && t.web.canGoForward()) t.web.goForward(); },
                 this::toggleBookmark,
@@ -838,11 +853,21 @@ public class MainActivity extends Activity {
                 this::showBookmarks,
                 this::sharePage,
                 this::showHistory,
-                this::toggleDesktop});
+                this::toggleDesktop,
+                this::toggleAdblock});
     }
 
     private void showHistory() {
         HistoryUi.show(this, url -> go(url));
+    }
+
+    /** Liga/desliga o bloqueador de anúncios e recarrega a página. */
+    private void toggleAdblock() {
+        boolean on = !AdBlock.enabled(this);
+        AdBlock.setEnabled(this, on);
+        Tab c = curTab();
+        if (!c.home) c.web.reload();
+        toast(on ? "Bloqueador de anúncios ativado" : "Bloqueador de anúncios desativado");
     }
 
     /** Liga/desliga o modo computador (site para PC) e recarrega a página. */

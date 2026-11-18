@@ -11,7 +11,7 @@ import android.view.View;
 final class Glyph extends View {
     static final int BACK = 0, FWD = 1, RELOAD = 2, SEARCH = 3, STAR = 4, DOWNLOAD = 5,
             DOTS = 6, PLUS = 7, CLOSE = 8, GLOBE = 9, PLUSBOX = 10, TRASH = 11,
-            SLIDERS = 12, DLCHECK = 13, SHARE = 14, HISTORY = 15, DESKTOP = 16;
+            SLIDERS = 12, DLCHECK = 13, SHARE = 14, HISTORY = 15, DESKTOP = 16, SHIELD = 17;
 
     private final int type;
     private int color;
@@ -218,6 +218,22 @@ final class Glyph extends View {
                 c.drawRoundRect(rect, 2.5f * u, 2.5f * u, p);
                 c.drawLine(12 * u, 16 * u, 12 * u, 20 * u, p);
                 c.drawLine(8 * u, 20 * u, 16 * u, 20 * u, p);
+                break;
+            case SHIELD:
+                path.reset();
+                path.moveTo(12 * u, 3 * u);
+                path.lineTo(19 * u, 6 * u);
+                path.lineTo(19 * u, 12 * u);
+                path.lineTo(12 * u, 21 * u);
+                path.lineTo(5 * u, 12 * u);
+                path.lineTo(5 * u, 6 * u);
+                path.close();
+                c.drawPath(path, p);
+                path.reset();
+                path.moveTo(8.8f * u, 11.8f * u);
+                path.lineTo(11.2f * u, 14.2f * u);
+                path.lineTo(15.4f * u, 9.4f * u);
+                c.drawPath(path, p);
                 break;
             default: // GLOBE
                 c.drawCircle(12 * u, 12 * u, 9.3f * u, p);

@@ -21,7 +21,7 @@ final class AppMenu {
     // índices do array de ações
     static final int BACK = 0, FWD = 1, STAR = 2, DOWNLOAD = 3, RELOAD = 4,
             NEW_TAB = 5, CLEAR = 6, SETTINGS = 7, TRANSFERS = 8, BOOKMARKS = 9, SHARE = 10,
-            HISTORY = 11, DESKTOP = 12;
+            HISTORY = 11, DESKTOP = 12, ADBLOCK = 13;
 
     private AppMenu() {
     }
@@ -47,7 +47,7 @@ final class AppMenu {
     }
 
     static void show(final Activity a, boolean canBack, boolean canFwd, boolean starred,
-                     boolean desktopOn, final Runnable[] act) {
+                     boolean desktopOn, boolean adOn, final Runnable[] act) {
         final Dialog d = new Dialog(a, android.R.style.Theme_Material_Dialog_NoActionBar);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -104,6 +104,13 @@ final class AppMenu {
         item(a, d, panel, Glyph.DLCHECK, false, "Transferências", act, TRANSFERS);
         item(a, d, panel, Glyph.STAR, true, "Favoritos", act, BOOKMARKS);
         panel.addView(divider(a));
+        LinearLayout ad = item(a, d, panel, Glyph.SHIELD, adOn, "Bloqueador de anúncios", act, ADBLOCK);
+        Switch adSw = new Switch(a);
+        adSw.setChecked(adOn);
+        adSw.setClickable(false);
+        adSw.setFocusable(false);
+        ad.addView(adSw, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout desk = item(a, d, panel, Glyph.DESKTOP, desktopOn, "Modo computador", act, DESKTOP);
         Switch sw = new Switch(a);
         sw.setChecked(desktopOn);
