@@ -321,12 +321,13 @@ public class MainActivity extends Activity {
         col.setClipChildren(false);
         col.setClipToPadding(false);
 
-        TextView logo = new TextView(this);
-        logo.setText("Arbeon");
-        logo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 46);
-        logo.setTypeface(Typeface.DEFAULT_BOLD);
-        logo.setTextColor(Fx.ACCENT);
-        col.addView(logo, new LinearLayout.LayoutParams(WRAP, WRAP));
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.drawable.arbeon_logo);
+        logo.setAdjustViewBounds(true);
+        logo.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(290), WRAP);
+        logoLp.bottomMargin = dp(6);
+        col.addView(logo, logoLp);
 
         TextView sub = new TextView(this);
         sub.setText("Pesquise com o Google");
