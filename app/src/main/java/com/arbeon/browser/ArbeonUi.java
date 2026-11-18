@@ -28,7 +28,7 @@ final class ArbeonUi {
                     new int[]{0xFFFFFFFF, 0xFFE8EBF7});
             boolean multi = msg.length() > 36 || msg.toString().contains("\n");
             g.setCornerRadius(Fx.dp(c, multi ? 26 : 100));
-            g.setStroke(Fx.dp(c, 2), 0xFF9DB7F5);
+            g.setStroke(Fx.dp(c, 2), Fx.BORDER);
             t.setBackground(g);
             Toast toast = new Toast(c);
             toast.setView(t);
@@ -46,7 +46,7 @@ final class ArbeonUi {
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0xFFFFFFFF, 0xFFEEF2FF});
         g.setCornerRadius(Fx.dp(c, 24));
-        g.setStroke(Fx.dp(c, 2), 0xFF9DB7F5);
+        g.setStroke(Fx.dp(c, 2), Fx.BORDER);
         e.setBackground(g);
         e.setPadding(Fx.dp(c, 18), Fx.dp(c, 12), Fx.dp(c, 18), Fx.dp(c, 12));
         e.setTextColor(Fx.NAVY);

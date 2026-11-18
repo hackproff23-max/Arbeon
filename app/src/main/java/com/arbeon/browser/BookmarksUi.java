@@ -224,7 +224,7 @@ final class BookmarksUi {
         final GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0xFFFFFFFF, 0xFFEEF2FF});
         pbg.setCornerRadius(dp(30));
-        pbg.setStroke(dp(2), 0xFF9DB7F5);
+        pbg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(pbg);
         Fx.glow(pill, 3);
         Glyph lupa = new Glyph(a, Glyph.SEARCH, Fx.ACCENT, 20);
@@ -239,7 +239,7 @@ final class BookmarksUi {
         search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         search.setBackground(null);
         search.setPadding(dp(12), 0, 0, 0);
-        search.setOnFocusChangeListener((v, f) -> pbg.setStroke(dp(2), f ? Fx.GLOW : 0xFF9DB7F5));
+        search.setOnFocusChangeListener((v, f) -> pbg.setStroke(dp(2), f ? Fx.GLOW : Fx.BORDER));
         search.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int st, int c, int af) {

@@ -11,7 +11,7 @@ import android.view.View;
 /** Ícones preenchidos da tela de Configurações, desenhados no código (sem imagens). */
 final class SIcon extends View {
     static final int SHIELD_LOCK = 0, COMPASS = 1, GEAR = 2, BELL = 3, ACCESS = 4, CHEVRON = 5,
-            HELP = 6, SLIDERS = 7, MONITOR = 8, TRASH = 9, INFO = 10;
+            HELP = 6, SLIDERS = 7, MONITOR = 8, TRASH = 9, INFO = 10, PALETTE = 11;
 
     private final int type;
     private final int color;
@@ -155,6 +155,14 @@ final class SIcon extends View {
                 c.drawPath(path, p);
                 c.drawLine(10.2f * u, 10 * u, 10.2f * u, 16.5f * u, p);
                 c.drawLine(13.8f * u, 10 * u, 13.8f * u, 16.5f * u, p);
+                break;
+            case PALETTE:
+                c.drawCircle(12 * u, 12 * u, 10 * u, f);
+                c.drawCircle(7.2f * u, 11.2f * u, 1.7f * u, w);
+                c.drawCircle(10.2f * u, 6.8f * u, 1.7f * u, w);
+                c.drawCircle(15.4f * u, 7.2f * u, 1.7f * u, w);
+                c.drawCircle(18f * u, 11.6f * u, 1.7f * u, w);
+                c.drawCircle(15.6f * u, 17.2f * u, 3f * u, w);
                 break;
             default: // INFO
                 c.drawCircle(12 * u, 12 * u, 9.4f * u, p);

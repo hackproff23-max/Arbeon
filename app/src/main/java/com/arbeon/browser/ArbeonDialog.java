@@ -115,7 +115,7 @@ final class ArbeonDialog {
             t.setTextColor(0xFFFFFFFF);
         } else {
             g.setColor(0xFFFFFFFF);
-            g.setStroke(dp(2), 0xFF9DB7F5);
+            g.setStroke(dp(2), Fx.BORDER);
             t.setText("");
         }
         t.setBackground(g);
@@ -159,7 +159,7 @@ final class ArbeonDialog {
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0xFFFFFFFF, 0xFFE9EEFF});
         bg.setCornerRadius(dp(30));
-        bg.setStroke(dp(2), 0xFFBFD0FA);
+        bg.setStroke(dp(2), Fx.BORDER2);
         card.setBackground(bg);
 
         if (title != null && title.length() > 0) {

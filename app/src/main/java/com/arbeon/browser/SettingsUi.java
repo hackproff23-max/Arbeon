@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -29,9 +30,6 @@ import java.text.Normalizer;
 final class SettingsUi {
     private static final int MATCH = ViewGroup.LayoutParams.MATCH_PARENT;
     private static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT;
-    private static final int ICON = 0xFF12248A;
-    private static final int BG_TOP = 0xFFF3F6FF;
-    private static final int BG_BOT = 0xFFE2ECFF;
 
     private static final class Item {
         final int icon;
@@ -51,6 +49,7 @@ final class SettingsUi {
     private final Runnable clear;
     private Dialog d;
     private boolean changed;
+    private boolean themeChanged;
     private boolean onSub;
 
     private SettingsUi(Activity a, SettingsDialog.OnSave save, Runnable clear) {
@@ -82,13 +81,15 @@ final class SettingsUi {
         });
         d.setOnDismissListener(x -> {
             if (changed) save.run(prefs.getBoolean("js", true), prefs.getBoolean("desktop", false));
+            // cores novas: reconstrói a tela do app para aplicar o tema (as guias recarregam)
+            if (themeChanged) a.recreate();
         });
         showMain();
         Window w = d.getWindow();
         if (w != null) {
             w.setLayout(MATCH, MATCH);
-            w.setStatusBarColor(BG_TOP);
-            w.setNavigationBarColor(BG_BOT);
+            w.setStatusBarColor(Fx.SURFACE);
+            w.setNavigationBarColor(Fx.TOP2);
             w.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         }
         d.show();
@@ -117,7 +118,7 @@ final class SettingsUi {
         GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0xFFFFFFFF, 0xFFF1F3FC});
         pbg.setCornerRadius(dp(100));
-        pbg.setStroke(dp(2), 0xFF9DB7F5);
+        pbg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(pbg);
         Fx.glow(pill, 4);
         Glyph lupa = new Glyph(a, Glyph.SEARCH, Fx.NAVY, 20);
@@ -145,6 +146,7 @@ final class SettingsUi {
 
         final Item[] main = {
                 new Item(SIcon.SHIELD_LOCK, "Privacidade e segurança", this::showPrivacy),
+                new Item(SIcon.PALETTE, "Aparência", this::showAppearance),
                 new Item(SIcon.GEAR, "Configurações de sites", this::showSites),
                 new Item(SIcon.COMPASS, "Navegador padrão", this::openDefaultBrowser)
         };
@@ -243,6 +245,178 @@ final class SettingsUi {
         list.addView(r, rowLp(12));
     }
 
+    // ---- Aparência: cores do tema
+
+    private static final int[] PRESET_HUES = {-1, 140, 175, 270, 330, 0, 25};
+    private static final String[] PRESET_NAMES = {"Azul", "Verde", "Turquesa", "Roxo", "Rosa", "Vermelho", "Laranja"};
+
+    private void applyHue(int hue) {
+        prefs.edit().putInt("theme_hue", hue).apply();
+        Fx.setHue(hue);
+        themeChanged = true;
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setStatusBarColor(Fx.SURFACE);
+            w.setNavigationBarColor(Fx.TOP2);
+        }
+    }
+
+    private void showAppearance() {
+        LinearLayout list = beginSub("Aparência");
+        final int cur = prefs.getInt("theme_hue", -1);
+
+        list.addView(note("Escolha a cor do Arbeon. Vale para botões, abas, barras, brilhos e ícones."), rowLp(4));
+
+        // ---- prévia
+        LinearLayout prev = new LinearLayout(a);
+        prev.setOrientation(LinearLayout.HORIZONTAL);
+        prev.setGravity(Gravity.CENTER_VERTICAL);
+        prev.setPadding(dp(14), dp(14), dp(14), dp(14));
+        GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0xFFFFFFFF, Fx.FACE});
+        pbg.setCornerRadius(dp(28));
+        pbg.setStroke(dp(2), Fx.BORDER);
+        prev.setBackground(pbg);
+        Fx.glow(prev, 4);
+        Glyph g1 = new Glyph(a, Glyph.RELOAD, Fx.ACCENT, 19);
+        g1.setBackground(Fx.button(a, true));
+        Fx.glow(g1, 4);
+        prev.addView(g1, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        TextView ex = new TextView(a);
+        ex.setText("Exemplo");
+        ex.setGravity(Gravity.CENTER);
+        ex.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        ex.setTypeface(Typeface.DEFAULT_BOLD);
+        ex.setTextColor(0xFFFFFFFF);
+        GradientDrawable eg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Fx.GLOW, Fx.ACCENT});
+        eg.setCornerRadius(dp(100));
+        ex.setBackground(eg);
+        Fx.glow(ex, 5);
+        LinearLayout.LayoutParams exp = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        exp.leftMargin = dp(14);
+        prev.addView(ex, exp);
+        list.addView(prev, rowLp(12));
+
+        // ---- cores prontas
+        TextView l1 = sectionLabel("Cores");
+        list.addView(l1, sectionLp());
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(a);
+        hs.setHorizontalScrollBarEnabled(false);
+        hs.setClipChildren(false);
+        hs.setClipToPadding(false);
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClipChildren(false);
+        row.setPadding(dp(4), dp(10), dp(4), dp(10));
+        for (int i = 0; i < PRESET_HUES.length; i++) {
+            final int hue = PRESET_HUES[i];
+            LinearLayout cell = new LinearLayout(a);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setGravity(Gravity.CENTER_HORIZONTAL);
+            cell.setClipChildren(false);
+            TextView dot = new TextView(a);
+            int base = hue < 0 ? 0xFF1F5FE0 : Color.HSVToColor(new float[]{hue, 0.84f, 0.88f});
+            GradientDrawable dg = new GradientDrawable();
+            dg.setShape(GradientDrawable.OVAL);
+            dg.setColor(base);
+            if (hue == cur) dg.setStroke(dp(3), Fx.NAVY);
+            dot.setBackground(dg);
+            dot.setGravity(Gravity.CENTER);
+            dot.setTextColor(0xFFFFFFFF);
+            dot.setTypeface(Typeface.DEFAULT_BOLD);
+            dot.setText(hue == cur ? "✓" : "");
+            Fx.glow(dot, 4);
+            cell.addView(dot, new LinearLayout.LayoutParams(dp(50), dp(50)));
+            TextView nm = new TextView(a);
+            nm.setText(PRESET_NAMES[i]);
+            nm.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            nm.setTextColor(Fx.NAVY);
+            nm.setPadding(0, dp(6), 0, 0);
+            cell.addView(nm, new LinearLayout.LayoutParams(WRAP, WRAP));
+            cell.setOnClickListener(v -> {
+                applyHue(hue);
+                showAppearance();
+            });
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(68), WRAP);
+            row.addView(cell, cp);
+        }
+        hs.addView(row, new FrameLayout.LayoutParams(WRAP, WRAP));
+        list.addView(hs, lp(MATCH, 0, 4));
+
+        // ---- cor personalizada (barra de tons)
+        list.addView(sectionLabel("Personalizada"), sectionLp());
+        HueBar bar = new HueBar(a, cur < 0 ? 222 : cur, new HueBar.Listener() {
+            @Override
+            public void onHue(int hue, boolean done) {
+                if (done) {
+                    applyHue(hue);
+                    showAppearance();
+                }
+            }
+        });
+        list.addView(bar, lp(MATCH, 54, 14));
+
+        // ---- restaurar
+        LinearLayout reset = pillRow(SIcon.PALETTE, "Restaurar azul padrão", null);
+        reset.setOnClickListener(v -> {
+            applyHue(-1);
+            showAppearance();
+        });
+        list.addView(reset, rowLp(22));
+        list.addView(note("Ao sair das configurações o Arbeon recarrega a tela para aplicar as cores (as guias abertas recarregam)."), rowLp(14));
+    }
+
+    /** Barra com todos os tons; arraste para escolher a cor. */
+    private static final class HueBar extends View {
+        interface Listener {
+            void onHue(int hue, boolean done);
+        }
+
+        private final Listener l;
+        private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.graphics.RectF r = new android.graphics.RectF();
+        private int hue;
+
+        HueBar(Activity a, int hue, Listener l) {
+            super(a);
+            this.hue = hue;
+            this.l = l;
+            Fx.glow(this, 3);
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas c) {
+            float h = getHeight(), w = getWidth(), pad = h / 2f;
+            int[] cols = new int[7];
+            for (int i = 0; i < 7; i++) cols[i] = Color.HSVToColor(new float[]{i * 60f, 0.84f, 0.92f});
+            p.setShader(new android.graphics.LinearGradient(pad, 0, w - pad, 0, cols, null,
+                    android.graphics.Shader.TileMode.CLAMP));
+            r.set(pad / 2f, h * 0.28f, w - pad / 2f, h * 0.72f);
+            c.drawRoundRect(r, h * 0.22f, h * 0.22f, p);
+            p.setShader(null);
+            float x = pad + (w - 2 * pad) * (hue / 359f);
+            p.setColor(0xFFFFFFFF);
+            c.drawCircle(x, h / 2f, h * 0.42f, p);
+            p.setColor(Color.HSVToColor(new float[]{hue, 0.84f, 0.92f}));
+            c.drawCircle(x, h / 2f, h * 0.30f, p);
+        }
+
+        @Override
+        public boolean onTouchEvent(android.view.MotionEvent e) {
+            float pad = getHeight() / 2f;
+            float t = (e.getX() - pad) / Math.max(1f, getWidth() - 2 * pad);
+            hue = Math.round(Math.max(0f, Math.min(1f, t)) * 359f);
+            boolean up = e.getActionMasked() == android.view.MotionEvent.ACTION_UP;
+            if (e.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                getParent().requestDisallowInterceptTouchEvent(true);
+            }
+            invalidate();
+            l.onHue(hue, up);
+            return true;
+        }
+    }
+
     private void showSites() {
         LinearLayout list = beginSub("Configurações de sites");
         addToggle(list, SIcon.SLIDERS, "Ativar JavaScript", "Necessário para a maioria dos sites", "js", true);
@@ -298,7 +472,7 @@ final class SettingsUi {
         LinearLayout root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{BG_TOP, BG_BOT}));
+                new int[]{Fx.SURFACE, Fx.TOP1}));
         root.setPadding(dp(16), dp(14), dp(16), 0);
         root.setClipChildren(false);
         root.setClipToPadding(false);
@@ -348,7 +522,7 @@ final class SettingsUi {
         t.setGravity(Gravity.CENTER_VERTICAL);
         t.setPadding(dp(32), dp(10), dp(22), dp(10));
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFFFFFFF, 0xFFEAF0FF});
+                new int[]{0xFFFFFFFF, Fx.TOP2});
         g.setCornerRadius(dp(100));
         t.setBackground(g);
         Fx.glow(t, 3);
@@ -404,7 +578,7 @@ final class SettingsUi {
         Fx.glow(r, 4);
         r.setClickable(true);
 
-        SIcon ic = new SIcon(a, icon, ICON, 24);
+        SIcon ic = new SIcon(a, icon, Fx.NAVY, 24);
         ic.setBackground(circle(0xFFFFFFFF));
         Fx.glow(ic, 2);
         r.addView(ic, new LinearLayout.LayoutParams(dp(48), dp(48)));

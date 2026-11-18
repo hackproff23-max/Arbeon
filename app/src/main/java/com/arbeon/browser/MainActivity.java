@@ -91,6 +91,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = getSharedPreferences("arbeon", MODE_PRIVATE);
+        Fx.init(this);
         buildUi();
         newTab(getIntent() != null ? getIntent().getDataString() : null);
     }
@@ -180,7 +181,7 @@ public class MainActivity extends Activity {
         final GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{0xFFFFFFFF, 0xFFF1F3FC});
         bg.setCornerRadius(dp(heightDp / 2));
-        bg.setStroke(dp(2), 0xFF9DB7F5);
+        bg.setStroke(dp(2), Fx.BORDER);
         pill.setBackground(bg);
         Fx.glow(pill, 3);
 
@@ -192,7 +193,7 @@ public class MainActivity extends Activity {
         field.setPadding(dp(10), 0, 0, 0);
         field.setTextColor(0xFF1B2140);
         field.setHintTextColor(0xFF7A8099);
-        field.setOnFocusChangeListener((v, focused) -> bg.setStroke(dp(2), focused ? Fx.GLOW : 0xFF9DB7F5));
+        field.setOnFocusChangeListener((v, focused) -> bg.setStroke(dp(2), focused ? Fx.GLOW : Fx.BORDER));
         pill.addView(field, new LinearLayout.LayoutParams(0, MATCH, 1f));
         if (bgOut != null) bgOut[0] = bg;
         return pill;
