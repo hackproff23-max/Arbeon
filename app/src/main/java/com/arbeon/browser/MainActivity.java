@@ -651,6 +651,23 @@ public class MainActivity extends Activity {
 
         w.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onJsAlert(WebView view, String url, String message, android.webkit.JsResult result) {
+                new ArbeonDialog(MainActivity.this).setTitle("Esta p\u00e1gina diz").setMessage(message)
+                        .setPositiveButton("OK", (dd, ww) -> result.confirm())
+                        .setOnCancel(() -> result.confirm()).show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, android.webkit.JsResult result) {
+                new ArbeonDialog(MainActivity.this).setTitle("Esta p\u00e1gina diz").setMessage(message)
+                        .setPositiveButton("OK", (dd, ww) -> result.confirm())
+                        .setNegativeButton("Cancelar", (dd, ww) -> result.cancel())
+                        .setOnCancel(() -> result.cancel()).show();
+                return true;
+            }
+
+            @Override
             public void onProgressChanged(WebView view, int p) {
                 if (!isCur(t)) return;
                 progress.setProgress(p);
@@ -778,7 +795,7 @@ public class MainActivity extends Activity {
     }
 
     private void confirmClear() {
-        new AlertDialog.Builder(this, DIALOG_THEME)
+        new ArbeonDialog(this)
                 .setTitle("Excluir dados de navegação?")
                 .setMessage("Cookies, cache, histórico e dados de sites serão apagados.")
                 .setPositiveButton("Excluir", (d, w) -> clearData())
@@ -823,7 +840,7 @@ public class MainActivity extends Activity {
     }
 
     private void toast(String s) {
-        Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+        ArbeonUi.toast(this, s);
     }
 
     // ---- recarregar: giro e puxar para atualizar

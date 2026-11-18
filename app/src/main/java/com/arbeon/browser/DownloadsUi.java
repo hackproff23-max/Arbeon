@@ -82,13 +82,13 @@ final class DownloadsUi {
 
     static void onDownloadRequested(Activity a, String url, String ua, String cd, String mime, long len) {
         if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
-            Toast.makeText(a, "Este tipo de link não é suportado para download", Toast.LENGTH_SHORT).show();
+            ArbeonUi.toast(a, "Este tipo de link não é suportado para download");
             return;
         }
         askPermissions(a);
         String name = URLUtil.guessFileName(url, cd, mime);
         DownloadEngine.get(a).add(url, ua, null, mime, name);
-        Toast.makeText(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra", Toast.LENGTH_LONG).show();
+        ArbeonUi.toast(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra");
     }
 
     private static void askPermissions(Activity a) {
@@ -454,8 +454,8 @@ final class DownloadsUi {
         oval.setShape(GradientDrawable.OVAL);
         oval.setColor(0xFFF8FAFF);
         oval.setStroke(dp(c, 2), 0x551457E8);
-        i.setBackground(new RippleDrawable(ColorStateList.valueOf(0x331457E8), oval, null));
-        i.setElevation(dp(c, 4));
+        i.setBackground(Fx.button(c, true));
+        Fx.glow(i, 4);
         i.setClickable(true);
         i.setOnClickListener(l);
         return i;
@@ -474,7 +474,7 @@ final class DownloadsUi {
         g.setCornerRadius(dp(c, 28));
         g.setColor(0xFFEEF2FF);
         g.setStroke(dp(c, 1), 0xFFDDE4F8);
-        t.setBackground(g);
+        t.setBackground(Fx.button(c, false)); Fx.glow(t, 3);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         tp.topMargin = dp(c, 8);
@@ -615,9 +615,10 @@ final class DownloadsUi {
         root.addView(hs);
 
         // --- lista
-        ScrollView sv = new ScrollView(a);
+        ScrollView sv = new ScrollView(a); sv.setClipChildren(false);
         final LinearLayout list = new LinearLayout(a);
         list.setOrientation(LinearLayout.VERTICAL);
+        list.setClipChildren(false);
         sv.addView(list, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         root.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -696,7 +697,9 @@ final class DownloadsUi {
                     }
                     Row r = buildRow(a, eng, it);
                     rows.add(r);
-                    list.addView(r.box);
+                    LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rlp.setMargins(dp(a, 14), dp(a, 5), dp(a, 14), dp(a, 7));
+                    list.addView(r.box, rlp);
                 }
                 list.addView(new View(a), new LinearLayout.LayoutParams(1, dp(a, 24)));
             }
@@ -743,17 +746,17 @@ final class DownloadsUi {
         r.box = new LinearLayout(a);
         r.box.setOrientation(LinearLayout.HORIZONTAL);
         r.box.setGravity(Gravity.CENTER_VERTICAL);
-        r.box.setPadding(dp(a, 16), dp(a, 10), dp(a, 4), dp(a, 10));
+        r.box.setPadding(dp(a, 12), dp(a, 10), dp(a, 6), dp(a, 10));
         TypedValue tv = new TypedValue();
         a.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true);
-        if (tv.resourceId != 0) r.box.setBackgroundResource(tv.resourceId);
+        r.box.setBackground(Fx.button(a, false)); Fx.glow(r.box, 3);
         r.box.setClickable(true);
 
         r.icon = new Ic(a, Ic.FILE, 0xFF2B2D33, 20);
         GradientDrawable oval = new GradientDrawable();
         oval.setShape(GradientDrawable.OVAL);
         oval.setColor(CIRCLE);
-        r.icon.setBackground(oval);
+        r.icon.setBackground(Fx.button(a, true)); Fx.glow(r.icon, 3);
         r.box.addView(r.icon, new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44)));
 
         LinearLayout col = new LinearLayout(a);
@@ -798,7 +801,7 @@ final class DownloadsUi {
     }
 
     private static void itemMenu(final Activity a, final DownloadEngine eng, final DlItem it, View anchor) {
-        PopupMenu m = new PopupMenu(a, anchor);
+        ArbeonPopup m = new ArbeonPopup(a, anchor);
         int st = it.state;
         if (st == DlItem.DONE) m.getMenu().add(0, 1, 0, "Abrir");
         else if (st == DlItem.RUNNING || st == DlItem.QUEUED) m.getMenu().add(0, 2, 0, "Pausar");
@@ -825,7 +828,7 @@ final class DownloadsUi {
                     try {
                         ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
                         cm.setPrimaryClip(ClipData.newPlainText("link", it.url));
-                        Toast.makeText(a, "Link copiado", Toast.LENGTH_SHORT).show();
+                        ArbeonUi.toast(a, "Link copiado");
                     } catch (Exception ignored) {
                     }
                     break;
@@ -833,7 +836,7 @@ final class DownloadsUi {
                     if (it.state == DlItem.DONE) {
                         eng.remove(it);
                     } else {
-                        new AlertDialog.Builder(a)
+                        new ArbeonDialog(a)
                                 .setTitle("Remover download?")
                                 .setMessage("O progresso parcial será apagado.")
                                 .setPositiveButton("Remover", (dd, w) -> eng.remove(it))
@@ -959,7 +962,7 @@ final class DownloadsUi {
         box.addView(lblConn);
         box.addView(sbConn);
 
-        new AlertDialog.Builder(a, android.R.style.Theme_Material_Light_Dialog_Alert)
+        new ArbeonDialog(a)
                 .setTitle("Configurações de download")
                 .setView(box)
                 .setPositiveButton("Fechar", null)
@@ -977,12 +980,12 @@ final class DownloadsUi {
     // ------------------------------------------------------------------ baixar por link / atualizar link / abrir
 
     private static void newLinkDialog(final Activity a, final DownloadEngine eng) {
-        final EditText e = new EditText(a);
+        final EditText e = new EditText(a); ArbeonUi.styleField(e);
         e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         e.setHint("https://…");
         String c = clipLink(a, null);
         if (c != null) e.setText(c);
-        new AlertDialog.Builder(a, android.R.style.Theme_Material_Light_Dialog_Alert)
+        new ArbeonDialog(a)
                 .setTitle("Baixar por link")
                 .setMessage("Cole o link direto do arquivo.")
                 .setView(e)
@@ -992,7 +995,7 @@ final class DownloadsUi {
                         askPermissions(a);
                         eng.add(u, null, null, null, URLUtil.guessFileName(u, null, null));
                     } else {
-                        Toast.makeText(a, "Link inválido", Toast.LENGTH_SHORT).show();
+                        ArbeonUi.toast(a, "Link inválido");
                     }
                 })
                 .setNegativeButton("Cancelar", null)
@@ -1000,14 +1003,14 @@ final class DownloadsUi {
     }
 
     private static void editLink(final Activity a, final DownloadEngine eng, final DlItem it) {
-        final EditText e = new EditText(a);
+        final EditText e = new EditText(a); ArbeonUi.styleField(e);
         e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         e.setMaxLines(5);
         String c = clipLink(a, it.url);
         e.setText(c != null ? c : it.url);
         e.setSelectAllOnFocus(true);
-        new AlertDialog.Builder(a, android.R.style.Theme_Material_Light_Dialog_Alert)
+        new ArbeonDialog(a)
                 .setTitle("Atualizar link")
                 .setMessage("Cole o novo link do mesmo arquivo. O progresso é mantido e o download continua de onde parou.")
                 .setView(e)
@@ -1015,9 +1018,9 @@ final class DownloadsUi {
                     String u = e.getText().toString().trim();
                     if (u.startsWith("http://") || u.startsWith("https://")) {
                         eng.updateLink(it, u);
-                        Toast.makeText(a, "Link atualizado", Toast.LENGTH_SHORT).show();
+                        ArbeonUi.toast(a, "Link atualizado");
                     } else {
-                        Toast.makeText(a, "Link inválido", Toast.LENGTH_SHORT).show();
+                        ArbeonUi.toast(a, "Link inválido");
                     }
                 })
                 .setNegativeButton("Cancelar", null)
@@ -1041,7 +1044,7 @@ final class DownloadsUi {
         try {
             a.startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS));
         } catch (Exception e) {
-            Toast.makeText(a, "Arquivo salvo na pasta Downloads", Toast.LENGTH_SHORT).show();
+            ArbeonUi.toast(a, "Arquivo salvo na pasta Downloads");
         }
     }
 }

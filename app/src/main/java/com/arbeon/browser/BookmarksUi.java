@@ -462,7 +462,7 @@ final class BookmarksUi {
             render();
         });
         r.setOnLongClickListener(v -> {
-            new AlertDialog.Builder(a, ALERT)
+            new ArbeonDialog(a)
                     .setTitle(f)
                     .setItems(new String[]{"Excluir pasta (os favoritos voltam para a lista)"}, (d, w) -> deleteFolder(f))
                     .setNegativeButton("Cancelar", null)
@@ -475,7 +475,7 @@ final class BookmarksUi {
     // ------------------------------------------------------------------ ações
 
     private void bmMenu(final Bm b) {
-        new AlertDialog.Builder(a, ALERT)
+        new ArbeonDialog(a)
                 .setTitle(nameOf(b))
                 .setItems(new String[]{"Abrir em nova guia", "Mover para pasta", "Remover"}, (d, w) -> {
                     if (w == 0) {
@@ -504,7 +504,7 @@ final class BookmarksUi {
         String[] names = new String[folders.size() + 1];
         names[0] = "Sem pasta";
         for (int i = 0; i < folders.size(); i++) names[i + 1] = folders.get(i);
-        new AlertDialog.Builder(a, ALERT)
+        new ArbeonDialog(a)
                 .setTitle("Mover para")
                 .setItems(names, (d, w) -> {
                     JSONArray arr = rawBms();
@@ -536,7 +536,7 @@ final class BookmarksUi {
     }
 
     private void sortMenu() {
-        new AlertDialog.Builder(a, ALERT)
+        new ArbeonDialog(a)
                 .setTitle("Ordenar por")
                 .setSingleChoiceItems(new String[]{"Mais recentes", "Mais antigos", "A\u2013Z"}, sort, (d, w) -> {
                     sort = w;
@@ -548,13 +548,14 @@ final class BookmarksUi {
 
     private void newFolder() {
         final EditText in = new EditText(a);
+        ArbeonUi.styleField(in);
         in.setHint("Nome da pasta");
         in.setSingleLine(true);
         in.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         FrameLayout box = new FrameLayout(a);
         box.setPadding(dp(22), dp(8), dp(22), 0);
         box.addView(in, new FrameLayout.LayoutParams(MATCH, WRAP));
-        new AlertDialog.Builder(a, ALERT)
+        new ArbeonDialog(a)
                 .setTitle("Nova pasta")
                 .setView(box)
                 .setPositiveButton("Criar", (d, w) -> {
@@ -575,7 +576,7 @@ final class BookmarksUi {
     }
 
     private void toast(String s) {
-        Toast.makeText(a, s, Toast.LENGTH_SHORT).show();
+        ArbeonUi.toast(a, s);
     }
 
     // ------------------------------------------------------------------ ícones e ilustração
