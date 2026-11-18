@@ -9,6 +9,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -17,6 +19,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.provider.MediaStore;
+import android.text.format.Formatter;
 import android.webkit.CookieManager;
 
 import org.json.JSONArray;
@@ -33,11 +36,12 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,11 +53,16 @@ import java.util.concurrent.atomic.AtomicReference;
  *    e o progresso fica salvo no disco (sobrevive a fechar o app).
  *  - Atualizar link: troca a URL mantendo o progresso.
  *  - Simultâneos: 0 a 10 downloads ao mesmo tempo (0 = manual).
+ *  - Notificações: uma por download (nome, %, velocidade, tempo restante, tamanho, barra e Cancelar).
+ *    Se falhar, aparece o ícone "!" na barra de status até você atualizar o link.
  */
 class DownloadEngine {
     static final int NOTIF_ID = 4711;
     private static final String CHANNEL = "arbeon_dl";
+    private static final String CHANNEL_FAIL = "arbeon_dl_fail";
     private static final int MAX_RETRY = 8;
+    private static final int BLUE = 0xFF1A73E8;
+    private static final int RED = 0xFFD93025;
 
     /** Erro que não adianta repetir (link expirado, sem espaço...). */
     static class FatalEx extends IOException {
@@ -75,6 +84,7 @@ class DownloadEngine {
     private final ExecutorService pool = Executors.newCachedThreadPool();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Object fileLock = new Object();
+    private final Set<Integer> shown = new HashSet<>(); // só na thread principal
     private boolean ticking, serviceOn;
     private long lastSave;
     private PowerManager.WakeLock wake;
@@ -106,6 +116,12 @@ class DownloadEngine {
 
     // ------------------------------------------------------------------ ações
 
+    DlItem find(String id) {
+        if (id == null) return null;
+        for (DlItem i : items) if (id.equals(i.id)) return i;
+        return null;
+    }
+
     DlItem add(String url, String ua, String referer, String mime, String name) {
         DlItem it = new DlItem();
         it.id = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
@@ -123,6 +139,7 @@ class DownloadEngine {
         }
         items.add(0, it);
         save();
+        askNotifPermission();
         schedule();
         return it;
     }
@@ -133,6 +150,7 @@ class DownloadEngine {
         it.stop = false;
         it.state = DlItem.QUEUED;
         it.force = maxSimultaneous() == 0;
+        clearAlert(it);
         schedule();
     }
 
@@ -159,6 +177,7 @@ class DownloadEngine {
             save();
             schedule();
         }
+        clearAlert(it);
     }
 
     void clearDone() {
@@ -179,6 +198,7 @@ class DownloadEngine {
             if (it.state == DlItem.QUEUED) it.state = DlItem.PAUSED;
             resume(it);
         }
+        clearAlert(it);
         save();
     }
 
@@ -205,6 +225,7 @@ class DownloadEngine {
         it.stop = false;
         it.error = "";
         it.state = DlItem.RUNNING;
+        clearAlert(it);
         pool.execute(() -> run(it));
     }
 
@@ -243,6 +264,7 @@ class DownloadEngine {
             } else {
                 it.state = DlItem.FAILED;
                 it.error = friendly(e);
+                notifyFailed(it);
             }
         } finally {
             it.speed = 0;
@@ -251,10 +273,12 @@ class DownloadEngine {
             if (it.removeAfter) {
                 items.remove(it);
                 part(it).delete();
+                clearAlert(it);
             } else if (again && it.state != DlItem.DONE) {
                 it.error = "";
                 it.state = DlItem.QUEUED;
                 it.force = true;
+                clearAlert(it);
             }
             it.stop = false;
             save();
@@ -614,7 +638,7 @@ class DownloadEngine {
         }
     }
 
-    // ------------------------------------------------------------------ velocidade, serviço e notificações
+    // ------------------------------------------------------------------ velocidade e serviço
 
     private void ensureTick() {
         main.post(() -> {
@@ -630,7 +654,6 @@ class DownloadEngine {
         public void run() {
             long now = SystemClock.elapsedRealtime();
             int active = 0;
-            double sum = 0;
             for (DlItem it : items) {
                 if (it.state == DlItem.RUNNING) {
                     long d = it.done();
@@ -641,7 +664,6 @@ class DownloadEngine {
                     }
                     it.lastBytes = d;
                     it.lastTime = now;
-                    sum += it.speed;
                     active++;
                 } else {
                     it.speed = 0;
@@ -654,10 +676,11 @@ class DownloadEngine {
                     final DownloadEngine self = DownloadEngine.this;
                     pool.execute(self::save);
                 }
-                notifyProgress(active, sum);
+                refreshNotifications();
                 main.postDelayed(this, 1000);
             } else {
                 ticking = false;
+                clearShown();
             }
         }
     };
@@ -692,58 +715,224 @@ class DownloadEngine {
         }
     }
 
-    Notification notification(String text) {
-        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification.Builder b;
-        if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Downloads",
-                    NotificationManager.IMPORTANCE_LOW));
-            b = new Notification.Builder(ctx, CHANNEL);
-        } else {
-            b = new Notification.Builder(ctx);
-        }
+    // ------------------------------------------------------------------ notificações
+
+    /** Id da notificação de progresso de um download. */
+    static int nid(DlItem it) {
+        return 20000 + (it.id.hashCode() & 0xFFFFF);
+    }
+
+    /** Id da notificação de resultado (concluído ou falha) de um download. */
+    static int rid(DlItem it) {
+        return 2000000 + (it.id.hashCode() & 0xFFFFF);
+    }
+
+    private NotificationManager nm() {
+        return (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+    }
+
+    private void channels() {
+        if (Build.VERSION.SDK_INT < 26) return;
+        NotificationManager nm = nm();
+        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Downloads",
+                NotificationManager.IMPORTANCE_LOW));
+        NotificationChannel f = new NotificationChannel(CHANNEL_FAIL, "Falhas de download",
+                NotificationManager.IMPORTANCE_DEFAULT);
+        f.setSound(null, null);
+        f.enableVibration(false);
+        nm.createNotificationChannel(f);
+    }
+
+    private Notification.Builder builder(String channel) {
+        channels();
+        if (Build.VERSION.SDK_INT >= 26) return new Notification.Builder(ctx, channel);
+        return new Notification.Builder(ctx);
+    }
+
+    private PendingIntent openApp(int req) {
         Intent open = new Intent(ctx, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pi = PendingIntent.getActivity(ctx, 0, open,
+        return PendingIntent.getActivity(ctx, req, open,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        b.setSmallIcon(android.R.drawable.stat_sys_download)
+    }
+
+    private Notification.Action cancelAction(DlItem it) {
+        Intent i = new Intent(ctx, DlActionReceiver.class)
+                .setAction(DlActionReceiver.CANCEL)
+                .putExtra("id", it.id);
+        PendingIntent pi = PendingIntent.getBroadcast(ctx, nid(it), i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return new Notification.Action.Builder(
+                Icon.createWithResource(ctx, R.drawable.ic_stat_cancel), "Cancelar", pi).build();
+    }
+
+    private static String clock(long secs) {
+        if (secs < 0) secs = 0;
+        long h = secs / 3600, m = (secs % 3600) / 60, s = secs % 60;
+        if (h > 0) return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    }
+
+    /** Notificação de progresso: nome, "% • velocidade • faltam mm:ss", "feito / total" e barra. */
+    private Notification progressNotification(DlItem it) {
+        long done = it.done(), total = it.total;
+        boolean known = total > 0;
+        int pct = known ? (int) Math.min(100, done * 100 / total) : 0;
+        double speed = it.speed;
+
+        StringBuilder line = new StringBuilder();
+        if (it.finalizing) {
+            line.append("Finalizando…");
+        } else {
+            line.append(known ? pct + "%" : "Baixando");
+            if (speed > 0) line.append(" • ").append(Formatter.formatFileSize(ctx, (long) speed)).append("/s");
+            if (known && speed > 1) {
+                line.append(" • faltam ").append(clock((long) ((total - done) / speed)));
+            }
+        }
+        String sizes = known
+                ? Formatter.formatFileSize(ctx, done) + " / " + Formatter.formatFileSize(ctx, total)
+                : Formatter.formatFileSize(ctx, done);
+
+        Notification.Builder b = builder(CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setColor(BLUE)
+                .setContentTitle(it.fileName)
+                .setContentText(line.toString())
+                .setSubText(sizes)
+                .setProgress(100, pct, !known || it.finalizing)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setCategory(Notification.CATEGORY_PROGRESS)
+                .setContentIntent(openApp(1))
+                .addAction(cancelAction(it));
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+        return b.build();
+    }
+
+    /** Notificação do serviço em primeiro plano: mostra o primeiro download em andamento. */
+    Notification notification(String text) {
+        for (DlItem it : items) {
+            if (it.state == DlItem.RUNNING) return progressNotification(it);
+        }
+        return builder(CHANNEL)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setColor(BLUE)
                 .setContentTitle("Arbeon")
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setContentIntent(pi);
-        return b.build();
+                .setContentIntent(openApp(0))
+                .build();
     }
 
-    private void notifyProgress(int active, double speed) {
+    /** Atualiza uma notificação por download (a primeira fica no serviço em primeiro plano). */
+    private void refreshNotifications() {
+        NotificationManager nm = nm();
+        Set<Integer> now = new HashSet<>();
+        boolean primary = true;
+        for (DlItem it : items) {
+            if (it.state != DlItem.RUNNING) continue;
+            int id = primary ? NOTIF_ID : nid(it);
+            primary = false;
+            try {
+                nm.notify(id, progressNotification(it));
+            } catch (Exception ignored) {
+            }
+            if (id != NOTIF_ID) now.add(id);
+        }
+        for (Integer id : shown) if (!now.contains(id)) nm.cancel(id);
+        shown.clear();
+        shown.addAll(now);
+    }
+
+    private void clearShown() {
         try {
-            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.notify(NOTIF_ID, notification(active + (active == 1 ? " download" : " downloads")
-                    + " · " + DownloadsUi.human((long) speed) + "/s"));
+            NotificationManager nm = nm();
+            for (Integer id : shown) nm.cancel(id);
         } catch (Exception ignored) {
         }
+        shown.clear();
     }
 
-    private void notifyDone(DlItem it) {
-        try {
-            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-            Notification.Builder b;
-            if (Build.VERSION.SDK_INT >= 26) {
-                nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Downloads",
-                        NotificationManager.IMPORTANCE_LOW));
-                b = new Notification.Builder(ctx, CHANNEL);
-            } else {
-                b = new Notification.Builder(ctx);
+    /** Remove o aviso de falha ou de concluído de um download. */
+    private void clearAlert(final DlItem it) {
+        main.post(() -> {
+            try {
+                nm().cancel(rid(it));
+            } catch (Exception ignored) {
             }
-            Intent open = new Intent(ctx, MainActivity.class);
-            PendingIntent pi = PendingIntent.getActivity(ctx, 1, open,
-                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-            b.setSmallIcon(android.R.drawable.stat_sys_download_done)
-                    .setContentTitle("Download concluído")
-                    .setContentText(it.fileName)
-                    .setAutoCancel(true)
-                    .setContentIntent(pi);
-            nm.notify(it.id.hashCode(), b.build());
+        });
+    }
+
+    private void notifyDone(final DlItem it) {
+        main.post(() -> {
+            try {
+                String mime = it.mime == null ? "" : it.mime;
+                int semi = mime.indexOf(';');
+                if (semi > 0) mime = mime.substring(0, semi).trim();
+                PendingIntent pi = openApp(2);
+                if (Build.VERSION.SDK_INT >= 29 && it.savedUri != null && it.savedUri.startsWith("content:")
+                        && !mime.isEmpty() && !mime.equals("application/octet-stream")) {
+                    Intent v = new Intent(Intent.ACTION_VIEW);
+                    v.setDataAndType(Uri.parse(it.savedUri), mime);
+                    v.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    pi = PendingIntent.getActivity(ctx, rid(it), v,
+                            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                }
+                String text = "Download concluído"
+                        + (it.total > 0 ? " • " + Formatter.formatFileSize(ctx, it.total) : "");
+                Notification.Builder b = builder(CHANNEL)
+                        .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                        .setColor(BLUE)
+                        .setContentTitle(it.fileName)
+                        .setContentText(text)
+                        .setAutoCancel(true)
+                        .setContentIntent(pi);
+                nm().notify(rid(it), b.build());
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    /** Falha: ícone "!" na barra de status até você atualizar o link (ou remover o download). */
+    private void notifyFailed(final DlItem it) {
+        main.post(() -> {
+            try {
+                if (it.state != DlItem.FAILED) return;
+                String err = it.error == null || it.error.isEmpty() ? "Erro desconhecido." : it.error;
+                Notification.Builder b = builder(CHANNEL_FAIL)
+                        .setSmallIcon(R.drawable.ic_stat_fail)
+                        .setColor(RED)
+                        .setContentTitle(it.fileName)
+                        .setContentText("Falha no download • toque para abrir")
+                        .setStyle(new Notification.BigTextStyle()
+                                .bigText(err + "\nAbra ⬇ Downloads e toque em Atualizar link."))
+                        .setCategory(Notification.CATEGORY_ERROR)
+                        .setOngoing(false)
+                        .setAutoCancel(false)
+                        .setContentIntent(openApp(3));
+                nm().notify(rid(it), b.build());
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
+    /** Android 13+: pede a permissão de notificações (no máximo 2 vezes). */
+    private void askNotifPermission() {
+        try {
+            if (Build.VERSION.SDK_INT < 33) return;
+            if (ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                    == PackageManager.PERMISSION_GRANTED) return;
+            int asked = prefs.getInt("notif_ask", 0);
+            if (asked >= 2) return;
+            prefs.edit().putInt("notif_ask", asked + 1).apply();
+            Intent i = new Intent(ctx, NotifPermActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(i);
         } catch (Exception ignored) {
         }
     }
