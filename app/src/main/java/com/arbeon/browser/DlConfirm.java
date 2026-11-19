@@ -16,6 +16,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.UnderlineSpan;
 import android.util.TypedValue;
@@ -121,9 +122,9 @@ final class DlConfirm {
         protected void onDraw(Canvas c) {
             float W = getWidth(), H = getHeight(), d = dens(this);
             edge.reset();
-            edge.moveTo(0.58f * W, 0);
-            edge.cubicTo(0.64f * W, 0.55f * H, 0.74f * W, 0.80f * H, 0.82f * W, 0.70f * H);
-            edge.cubicTo(0.90f * W, 0.62f * H, 0.94f * W, 0.40f * H, W, 0.36f * H);
+            edge.moveTo(0.62f * W, 0);
+            edge.cubicTo(0.67f * W, 0.50f * H, 0.74f * W, 0.72f * H, 0.81f * W, 0.62f * H);
+            edge.cubicTo(0.89f * W, 0.52f * H, 0.94f * W, 0.34f * H, W, 0.30f * H);
             fill.set(edge);
             fill.lineTo(W, 0);
             fill.close();
@@ -152,7 +153,7 @@ final class DlConfirm {
             c.drawPath(edge, p);
 
             // estrela de 4 pontas
-            float cx = 0.80f * W, cy = 0.30f * H, r = 15 * d;
+            float cx = 0.84f * W, cy = 0.27f * H, r = 11 * d;
             p.setStyle(Paint.Style.FILL);
             p.setShader(new RadialGradient(cx, cy, r * 1.8f, 0x99FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP));
             c.drawCircle(cx, cy, r * 1.8f, p);
@@ -431,6 +432,14 @@ final class DlConfirm {
 
     // ------------------------------------------------------------------ janela
 
+    private static TextView msgLine(Context c, String text) {
+        TextView t = new TextView(c);
+        t.setText(text);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        t.setTextColor(Fx.NAVY);
+        return t;
+    }
+
     private static String extOf(String name) {
         int i = name == null ? -1 : name.lastIndexOf('.');
         if (i < 0 || i == name.length() - 1) return "FILE";
@@ -460,7 +469,7 @@ final class DlConfirm {
         card.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable cbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{Fx.WHITE, Fx.FIELD2});
-        cbg.setCornerRadius(dp(a, 30));
+        cbg.setCornerRadius(dp(a, 26));
         cbg.setStroke(dp(a, 2), Fx.GLOW);
         card.setBackground(cbg);
         card.setClipToOutline(true);
@@ -475,28 +484,28 @@ final class DlConfirm {
         LinearLayout row = new LinearLayout(a);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(a, 16), dp(a, 14), dp(a, 10), dp(a, 14));
+        row.setPadding(dp(a, 14), dp(a, 10), dp(a, 8), dp(a, 10));
         Badge badge = new Badge(a);
         Fx.glow(badge, 6);
-        row.addView(badge, new LinearLayout.LayoutParams(dp(a, 64), dp(a, 64)));
+        row.addView(badge, new LinearLayout.LayoutParams(dp(a, 52), dp(a, 52)));
         TextView title = new TextView(a);
         title.setText(choose ? "Esse download já existe" : (again ? "Baixar o arquivo novamente?" : "Baixar o arquivo?"));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Fx.NAVY);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        tp.leftMargin = dp(a, 14);
-        tp.rightMargin = dp(a, 70);
+        tp.leftMargin = dp(a, 12);
+        tp.rightMargin = dp(a, 44);
         row.addView(title, tp);
         hdr.addView(row, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         XView close = new XView(a, Fx.NAVY, 0.30f);
         close.setClickable(true);
         close.setOnClickListener(v -> d.dismiss());
-        FrameLayout.LayoutParams xp = new FrameLayout.LayoutParams(dp(a, 44), dp(a, 44),
+        FrameLayout.LayoutParams xp = new FrameLayout.LayoutParams(dp(a, 38), dp(a, 38),
                 Gravity.END | Gravity.BOTTOM);
         xp.rightMargin = dp(a, 8);
-        xp.bottomMargin = dp(a, 10);
+        xp.bottomMargin = dp(a, 4);
         hdr.addView(close, xp);
         card.addView(hdr, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -506,40 +515,45 @@ final class DlConfirm {
         body.setOrientation(LinearLayout.VERTICAL);
         GradientDrawable bbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 new int[]{Fx.WHITE, Fx.FIELD2});
-        bbg.setCornerRadius(dp(a, 24));
+        bbg.setCornerRadius(dp(a, 20));
         bbg.setStroke(dp(a, 2), Fx.BORDER2);
         body.setBackground(bbg);
-        body.setPadding(dp(a, 14), dp(a, 16), dp(a, 14), dp(a, 14));
+        body.setPadding(dp(a, 12), dp(a, 12), dp(a, 12), dp(a, 10));
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
-        bp.setMargins(dp(a, 10), 0, dp(a, 10), dp(a, 12));
+        bp.setMargins(dp(a, 8), 0, dp(a, 8), dp(a, 10));
         card.addView(body, bp);
 
         LinearLayout info = new LinearLayout(a);
         info.setOrientation(LinearLayout.HORIZONTAL);
         info.setGravity(Gravity.CENTER_VERTICAL);
-        info.addView(new FileIcon(a, extOf(name)), new LinearLayout.LayoutParams(dp(a, 56), dp(a, 68)));
-        TextView msg = new TextView(a);
-        SpannableStringBuilder sb = new SpannableStringBuilder(choose ? "" : "Quer baixar ");
-        int s0 = sb.length();
-        sb.append(name);
-        sb.setSpan(new ForegroundColorSpan(Fx.ACCENT), s0, sb.length(), 0);
-        sb.setSpan(new UnderlineSpan(), s0, sb.length(), 0);
-        if (len > 0) sb.append(" (").append(sizePt(len)).append(")");
-        sb.append(choose ? " já está nos downloads. Atualizar o link ou baixar novamente?"
-                : (again ? " novamente?" : "?"));
-        msg.setText(sb);
-        msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        msg.setTextColor(Fx.NAVY);
+        info.addView(new FileIcon(a, extOf(name)), new LinearLayout.LayoutParams(dp(a, 40), dp(a, 52)));
+        LinearLayout msgCol = new LinearLayout(a);
+        msgCol.setOrientation(LinearLayout.VERTICAL);
+        if (!choose) msgCol.addView(msgLine(a, "Quer baixar"));
+        TextView nm = new TextView(a);
+        SpannableStringBuilder nb = new SpannableStringBuilder(name);
+        nb.setSpan(new ForegroundColorSpan(Fx.ACCENT), 0, nb.length(), 0);
+        nb.setSpan(new UnderlineSpan(), 0, nb.length(), 0);
+        nm.setText(nb);
+        nm.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        nm.setMaxLines(2);
+        nm.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        msgCol.addView(nm);
+        String size = len > 0 ? "(" + sizePt(len) + ")" : "";
+        String tail = choose
+                ? (size.isEmpty() ? "" : size + " ") + "já está nos downloads. Atualizar o link ou baixar novamente?"
+                : size + (again ? " novamente?" : "?");
+        msgCol.addView(msgLine(a, tail.trim()));
         LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        mp.leftMargin = dp(a, 14);
-        info.addView(msg, mp);
+        mp.leftMargin = dp(a, 12);
+        info.addView(msgCol, mp);
         body.addView(info);
 
         View line = new View(a);
         line.setBackgroundColor(Fx.TOP1);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(a, 1));
-        lp.setMargins(dp(a, 2), dp(a, 14), dp(a, 2), dp(a, 14));
+        lp.setMargins(dp(a, 2), dp(a, 10), dp(a, 2), dp(a, 10));
         body.addView(line, lp);
 
         // ---- botões
@@ -562,15 +576,15 @@ final class DlConfirm {
             d.dismiss();
             if (choose && onUpdate != null) onUpdate.run();
         });
-        cancel.addView(choose ? new LinkIcon(a) : new XDot(a), new LinearLayout.LayoutParams(dp(a, 30), dp(a, 30)));
+        cancel.addView(choose ? new LinkIcon(a) : new XDot(a), new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
         TextView ct = new TextView(a);
         ct.setText(choose ? "Atualizar link" : "Cancelar");
-        ct.setTextSize(TypedValue.COMPLEX_UNIT_SP, choose ? 15 : 18);
+        ct.setTextSize(TypedValue.COMPLEX_UNIT_SP, choose ? 14 : 16);
         ct.setTypeface(Typeface.DEFAULT_BOLD);
         ct.setTextColor(Fx.NAVY);
-        ct.setPadding(dp(a, 8), 0, 0, 0);
+        ct.setPadding(dp(a, 6), 0, 0, 0);
         cancel.addView(ct);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, dp(a, 62), 1f);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, dp(a, 46), 1f);
         cp.rightMargin = dp(a, 10);
         btns.addView(cancel, cp);
 
@@ -587,15 +601,16 @@ final class DlConfirm {
         LinearLayout gc = new LinearLayout(a);
         gc.setOrientation(LinearLayout.HORIZONTAL);
         gc.setGravity(Gravity.CENTER);
-        gc.setPadding(dp(a, 10), 0, dp(a, 10), 0);
-        gc.addView(new DlArrow(a), new LinearLayout.LayoutParams(dp(a, 30), dp(a, 30)));
+        gc.setPadding(dp(a, 8), 0, dp(a, 8), 0);
+        gc.addView(new DlArrow(a), new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
         TextView gt = new TextView(a);
         gt.setText(choose ? "Baixar novamente" : (again ? "Fazer o download novamente" : "Fazer o download"));
-        gt.setTextSize(TypedValue.COMPLEX_UNIT_SP, choose ? 15 : 16);
+        gt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        gt.setMaxLines(2);
         gt.setTypeface(Typeface.DEFAULT_BOLD);
         gt.setTextColor(Color.WHITE);
         gt.setGravity(Gravity.CENTER);
-        gt.setPadding(dp(a, 8), 0, 0, 0);
+        gt.setPadding(dp(a, 6), 0, 0, 0);
         gc.addView(gt);
         go.addView(gc, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
@@ -603,7 +618,7 @@ final class DlConfirm {
             d.dismiss();
             if (onYes != null) onYes.run();
         });
-        btns.addView(go, new LinearLayout.LayoutParams(0, dp(a, 62), choose ? 1f : 1.25f));
+        btns.addView(go, new LinearLayout.LayoutParams(0, dp(a, 46), choose ? 1f : 1.3f));
         body.addView(btns);
 
         d.setContentView(wrap);
