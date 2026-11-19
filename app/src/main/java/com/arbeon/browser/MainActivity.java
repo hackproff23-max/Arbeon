@@ -772,7 +772,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        w.setDownloadListener((url, ua, cd, mime, len) -> DownloadsUi.onDownloadRequested(MainActivity.this, url, ua, cd, mime, len));
+        w.setDownloadListener((url, ua, cd, mime, len) -> DownloadsUi.onDownloadRequested(MainActivity.this, url, ua, cd, mime, len, w.getUrl()));
         w.setOverScrollMode(View.OVER_SCROLL_NEVER);
         attachPull(w, t);
         return w;
@@ -895,6 +895,11 @@ public class MainActivity extends Activity {
                 this::toggleDesktop,
                 this::toggleAdblock,
                 this::showDns});
+    }
+
+    /** Abre o site de origem de um download para renovar o link (usado por Atualizar link > Renovar no site). */
+    void openForRenew(String url) {
+        newTab(url);
     }
 
     private void showHistory() {

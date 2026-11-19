@@ -202,6 +202,13 @@ class DownloadEngine {
         save();
     }
 
+    /** Troca o link e também o User-Agent e a página de origem (Referer) usados no pedido. */
+    void updateLink(DlItem it, String newUrl, String ua, String referer) {
+        if (ua != null && !ua.isEmpty()) it.ua = ua;
+        if (referer != null && !referer.isEmpty()) it.referer = referer;
+        updateLink(it, newUrl);
+    }
+
     // ------------------------------------------------------------------ fila
 
     synchronized void schedule() {
@@ -345,6 +352,12 @@ class DownloadEngine {
         HttpURLConnection c = open(it, 0, 0);
         try {
             int code = c.getResponseCode();
+            String ctype = c.getContentType();
+            if ((code == 200 || code == 206) && ctype != null
+                    && ctype.toLowerCase(java.util.Locale.ROOT).startsWith("text/html")
+                    && it.fileName != null && !it.fileName.toLowerCase(java.util.Locale.ROOT).matches(".*\\.html?$")) {
+                throw new FatalEx("Esse link abre uma p\u00e1gina da web, n\u00e3o o arquivo. Use Atualizar link e Renovar no site.");
+            }
             long total = -1;
             boolean ranges = false;
             if (code == 206) {
@@ -485,7 +498,7 @@ class DownloadEngine {
 
     private void throwHttp(int code) throws IOException {
         if (code == 401 || code == 403 || code == 404 || code == 410) {
-            throw new FatalEx("Link expirado ou recusado (HTTP " + code + "). Toque em 🔗 Atualizar link.");
+            throw new FatalEx("Link expirado ou recusado (HTTP " + code + "). Toque em 🔗 Atualizar link e use Renovar no site.");
         }
         throw new IOException("HTTP " + code);
     }

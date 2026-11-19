@@ -77,17 +77,34 @@ final class DownloadsUi {
     private static final String[] CHIPS = {"Todas", "Em andamento", "Imagens", "Vídeos", "Áudio", "Outro"};
     private static final int[] CHIP_ICON = {Ic.DB, Ic.ARROWDOWN, Ic.IMAGE, Ic.PLAY, Ic.NOTE, Ic.FOLDER};
 
+    /** Download esperando um link novo vindo do navegador (Atualizar link > Renovar no site). */
+    static String renewId;
+    private static Dialog currentDialog;
+
     private DownloadsUi() {
     }
 
     // ------------------------------------------------------------------ entrada vinda do WebView
 
     static void onDownloadRequested(Activity a, String url, String ua, String cd, String mime, long len) {
+        onDownloadRequested(a, url, ua, cd, mime, len, null);
+    }
+
+    static void onDownloadRequested(Activity a, String url, String ua, String cd, String mime, long len, String referer) {
         if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
             ArbeonUi.toast(a, "Este tipo de link não é suportado para download");
             return;
         }
         final String name = URLUtil.guessFileName(url, cd, mime);
+        if (renewId != null) {
+            DlItem target = DownloadEngine.get(a).find(renewId);
+            renewId = null;
+            if (target != null && target.state != DlItem.DONE) {
+                DownloadEngine.get(a).updateLink(target, url, ua, referer);
+                ArbeonUi.toast(a, "Link renovado: " + target.fileName + "\nO download continua de onde parou.");
+                return;
+            }
+        }
         DlItem found = null;
         try {
             for (DlItem it : DownloadEngine.get(a).items) {
@@ -101,14 +118,14 @@ final class DownloadsUi {
         final DlItem existing = found;
         final Runnable add = () -> {
             askPermissions(a);
-            DownloadEngine.get(a).add(url, ua, null, mime, name);
+            DownloadEngine.get(a).add(url, ua, referer, mime, name);
             ArbeonUi.toast(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra");
         };
         if (existing == null) {
             DlConfirm.show(a, name, len, false, add, null);
         } else {
             DlConfirm.show(a, name, len, true, add, () -> {
-                DownloadEngine.get(a).updateLink(existing, url);
+                DownloadEngine.get(a).updateLink(existing, url, ua, referer);
                 ArbeonUi.toast(a, "Link atualizado");
             });
         }
@@ -759,7 +776,11 @@ final class DownloadsUi {
             if (!Fx.dark && Build.VERSION.SDK_INT >= 26) vis |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
             w.getDecorView().setSystemUiVisibility(vis);
         }
-        d.setOnDismissListener(x -> h.removeCallbacks(refresh[0]));
+        d.setOnDismissListener(x -> {
+            h.removeCallbacks(refresh[0]);
+            if (currentDialog == d) currentDialog = null;
+        });
+        currentDialog = d;
         d.show();
         refresh[0].run();
     }
@@ -1049,8 +1070,30 @@ final class DownloadsUi {
                         ArbeonUi.toast(a, "Link inválido");
                     }
                 })
+                .setNeutralButton("Renovar no site", (dd, w) -> renewInBrowser(a, it, e.getText().toString().trim()))
                 .setNegativeButton("Cancelar", null)
                 .show();
+    }
+
+    /** Abre o site de origem numa guia nova; o próximo download começado ali vira o link novo deste item. */
+    private static void renewInBrowser(Activity a, DlItem it, String typed) {
+        String page = null;
+        if (typed != null && (typed.startsWith("http://") || typed.startsWith("https://")) && !typed.equals(it.url)) {
+            page = typed;
+        }
+        if (page == null && it.referer != null && !it.referer.isEmpty()) page = it.referer;
+        if (page == null) {
+            String h = host(it.url);
+            if (h != null) page = "https://" + h + "/";
+        }
+        if (page == null || !(a instanceof MainActivity)) {
+            ArbeonUi.toast(a, "N\u00e3o achei a p\u00e1gina de origem deste download");
+            return;
+        }
+        renewId = it.id;
+        if (currentDialog != null) currentDialog.dismiss();
+        ((MainActivity) a).openForRenew(page);
+        ArbeonUi.toast(a, "Abra o download no site. Quando ele come\u00e7ar, o link novo \u00e9 aplicado.");
     }
 
     private static void openFile(Activity a, DlItem it) {
