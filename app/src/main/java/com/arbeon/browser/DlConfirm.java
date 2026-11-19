@@ -43,6 +43,27 @@ final class DlConfirm {
         return Fx.dp(c, v);
     }
 
+    /** Matiz do tema (Configurações > Aparência). Padrão: azul. */
+    private static float hue() {
+        return Fx.hue < 0 ? 222f : (Fx.hue % 360f);
+    }
+
+    private static int tone(float s, float v) {
+        return Color.HSVToColor(new float[]{hue(), s, v});
+    }
+
+    private static int tone(float s, float v, int alpha) {
+        return (tone(s, v) & 0x00FFFFFF) | (alpha << 24);
+    }
+
+    /** Evita que um desenho "match_parent" estique o cabeçalho: só ocupa o espaço que o pai já definiu. */
+    private static void measureFill(View v, int wSpec, int hSpec) {
+        int w = View.MeasureSpec.getSize(wSpec);
+        int h = View.MeasureSpec.getMode(hSpec) == View.MeasureSpec.EXACTLY
+                ? View.MeasureSpec.getSize(hSpec) : 0;
+        v.setMeasuredDimension(w, h);
+    }
+
     private static float dens(View v) {
         return v.getResources().getDisplayMetrics().density;
     }
@@ -91,6 +112,11 @@ final class DlConfirm {
         }
 
         @Override
+        protected void onMeasure(int wSpec, int hSpec) {
+            measureFill(this, wSpec, hSpec);
+        }
+
+        @Override
         protected void onDraw(Canvas c) {
             float W = getWidth(), H = getHeight(), d = dens(this);
             edge.reset();
@@ -105,9 +131,9 @@ final class DlConfirm {
             c.clipPath(fill);
             p.setStyle(Paint.Style.FILL);
             p.setShader(new LinearGradient(0.6f * W, 0, W, H,
-                    new int[]{0xFF040A38, 0xFF0A2C9C, 0xFF1E6BFF}, null, Shader.TileMode.CLAMP));
+                    new int[]{tone(.93f, .22f), tone(.93f, .61f), tone(.88f, 1f)}, null, Shader.TileMode.CLAMP));
             c.drawRect(0, 0, W, H, p);
-            p.setShader(new RadialGradient(0.90f * W, 0.20f * H, 0.32f * W, 0x773D8BFF, 0x003D8BFF,
+            p.setShader(new RadialGradient(0.90f * W, 0.20f * H, 0.32f * W, tone(.76f, 1f, 0x77), tone(.76f, 1f, 0x00),
                     Shader.TileMode.CLAMP));
             c.drawRect(0, 0, W, H, p);
             drawStars(c, p, W, H, stars, d);
@@ -117,7 +143,7 @@ final class DlConfirm {
             p.setShader(null);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeCap(Paint.Cap.ROUND);
-            p.setColor(0x553D8BFF);
+            p.setColor(tone(.76f, 1f, 0x55));
             p.setStrokeWidth(7 * d);
             c.drawPath(edge, p);
             p.setColor(Fx.GLOW);
@@ -163,7 +189,7 @@ final class DlConfirm {
             float cx = w / 2f, cy = h / 2f, r = Math.min(w, h) / 2f - 3 * d;
             p.setStyle(Paint.Style.FILL);
             p.setShader(new RadialGradient(cx, cy * 0.85f, r * 1.1f,
-                    new int[]{0xFF2250D8, 0xFF0A1C72, 0xFF030A33}, null, Shader.TileMode.CLAMP));
+                    new int[]{tone(.85f, .85f), tone(.90f, .45f), tone(.94f, .20f)}, null, Shader.TileMode.CLAMP));
             c.drawCircle(cx, cy, r, p);
             p.setShader(null);
             c.save();
@@ -253,12 +279,12 @@ final class DlConfirm {
             c.drawCircle(46 * u, 68 * u, 3 * u, p);
             // etiqueta
             RectF lab = new RectF(4 * u, 84 * u, 96 * u, 114 * u);
-            p.setShader(new LinearGradient(0, 84 * u, 0, 114 * u, 0xFF3D86FF, 0xFF0B3FC8, Shader.TileMode.CLAMP));
+            p.setShader(new LinearGradient(0, 84 * u, 0, 114 * u, tone(.76f, 1f), tone(.94f, .78f), Shader.TileMode.CLAMP));
             c.drawRoundRect(lab, 8 * u, 8 * u, p);
             p.setShader(null);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(2f * u);
-            p.setColor(0xFF0A2A7A);
+            p.setColor(tone(.93f, .48f));
             c.drawRoundRect(lab, 8 * u, 8 * u, p);
             p.setStyle(Paint.Style.FILL);
             p.setColor(Color.WHITE);
@@ -281,6 +307,11 @@ final class DlConfirm {
         }
 
         @Override
+        protected void onMeasure(int wSpec, int hSpec) {
+            measureFill(this, wSpec, hSpec);
+        }
+
+        @Override
         protected void onDraw(Canvas c) {
             float w = getWidth(), h = getHeight(), d = dens(this);
             r.set(0, 0, w, h);
@@ -289,7 +320,7 @@ final class DlConfirm {
             c.save();
             c.clipPath(clip);
             p.setStyle(Paint.Style.FILL);
-            p.setShader(new RadialGradient(0.25f * w, 0.9f * h, 0.45f * w, 0x553D8BFF, 0x003D8BFF,
+            p.setShader(new RadialGradient(0.25f * w, 0.9f * h, 0.45f * w, tone(.76f, 1f, 0x55), tone(.76f, 1f, 0x00),
                     Shader.TileMode.CLAMP));
             c.drawRect(r, p);
             p.setShader(null);
@@ -461,9 +492,9 @@ final class DlConfirm {
         close.setClickable(true);
         close.setOnClickListener(v -> d.dismiss());
         FrameLayout.LayoutParams xp = new FrameLayout.LayoutParams(dp(a, 44), dp(a, 44),
-                Gravity.END | Gravity.CENTER_VERTICAL);
+                Gravity.END | Gravity.BOTTOM);
         xp.rightMargin = dp(a, 8);
-        xp.topMargin = dp(a, 14);
+        xp.bottomMargin = dp(a, 10);
         hdr.addView(close, xp);
         card.addView(hdr, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -543,7 +574,7 @@ final class DlConfirm {
 
         FrameLayout go = new FrameLayout(a);
         GradientDrawable gg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF03072E, 0xFF0A1F86, 0xFF0B3AC0});
+                new int[]{tone(.94f, .18f), tone(.93f, .52f), tone(.94f, .75f)});
         gg.setCornerRadius(dp(a, 100));
         gg.setStroke(dp(a, 3), Fx.GLOW);
         go.setBackground(gg);
