@@ -685,7 +685,7 @@ public class MainActivity extends Activity {
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u)));
                 } catch (Exception e) {
-                    toast("Não foi possível abrir este link");
+                    externalFallback(view, u);
                 }
                 return true;
             }
@@ -978,6 +978,58 @@ public class MainActivity extends Activity {
         }
         updateNav();
         toast("Dados de navegação apagados");
+    }
+
+    /** Link com esquema próprio que nenhum app abre: tenta intent:, usa a página de reserva ou mostra o link. */
+    private void externalFallback(WebView view, final String u) {
+        try {
+            if (u.startsWith("intent:")) {
+                Intent it = Intent.parseUri(u, Intent.URI_INTENT_SCHEME);
+                it.addCategory(Intent.CATEGORY_BROWSABLE);
+                it.setComponent(null);
+                it.setSelector(null);
+                try {
+                    startActivity(it);
+                    return;
+                } catch (Exception ignored) {
+                }
+                String fb = it.getStringExtra("browser_fallback_url");
+                if (fb != null && (fb.startsWith("http://") || fb.startsWith("https://"))) {
+                    view.loadUrl(fb);
+                    return;
+                }
+                String pkg = it.getPackage();
+                if (pkg != null) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg)));
+                        return;
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        String scheme = "";
+        try {
+            scheme = Uri.parse(u).getScheme();
+        } catch (Exception ignored) {
+        }
+        String shown = u.length() > 300 ? u.substring(0, 300) + "\u2026" : u;
+        new ArbeonDialog(this)
+                .setTitle("Nenhum app abre este link")
+                .setMessage("O site tentou abrir um link do tipo \"" + scheme
+                        + ":\", mas nenhum app instalado sabe abrir.\n\n" + shown)
+                .setPositiveButton("Copiar link", (d, w) -> {
+                    try {
+                        android.content.ClipboardManager cm =
+                                (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("link", u));
+                        toast("Link copiado");
+                    } catch (Exception ignored) {
+                    }
+                })
+                .setNegativeButton("Fechar", null)
+                .show();
     }
 
     private void toast(String s) {
