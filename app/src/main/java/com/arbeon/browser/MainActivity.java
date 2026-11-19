@@ -671,6 +671,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String u = req.getUrl().toString();
+                if (AdDns.blockNavigation(MainActivity.this, view, req)) return true;
                 if (WebPrefs.httpsOnly(MainActivity.this) && u.startsWith("http://")) {
                     view.loadUrl("https://" + u.substring(7));
                     return true;
@@ -696,6 +697,8 @@ public class MainActivity extends Activity {
                         return new android.webkit.WebResourceResponse("text/plain", "utf-8",
                                 new java.io.ByteArrayInputStream(new byte[0]));
                     }
+                    android.webkit.WebResourceResponse dr = AdDns.intercept(MainActivity.this, req);
+                    if (dr != null) return dr;
                 } catch (Exception ignored) {
                 }
                 return super.shouldInterceptRequest(view, req);
@@ -882,7 +885,8 @@ public class MainActivity extends Activity {
                 this::sharePage,
                 this::showHistory,
                 this::toggleDesktop,
-                this::toggleAdblock});
+                this::toggleAdblock,
+                this::showDns});
     }
 
     private void showHistory() {
@@ -896,6 +900,13 @@ public class MainActivity extends Activity {
         Tab c = curTab();
         if (!c.home) c.web.reload();
         toast(on ? "Bloqueador de anúncios ativado" : "Bloqueador de anúncios desativado");
+    }
+
+    private void showDns() {
+        DnsUi.show(this, () -> {
+            Tab c = curTab();
+            if (!c.home) c.web.reload();
+        });
     }
 
     /** Liga/desliga o modo computador (site para PC) e recarrega a página. */

@@ -21,7 +21,7 @@ final class AppMenu {
     // índices do array de ações
     static final int BACK = 0, FWD = 1, STAR = 2, DOWNLOAD = 3, RELOAD = 4,
             NEW_TAB = 5, CLEAR = 6, SETTINGS = 7, TRANSFERS = 8, BOOKMARKS = 9, SHARE = 10,
-            HISTORY = 11, DESKTOP = 12, ADBLOCK = 13;
+            HISTORY = 11, DESKTOP = 12, ADBLOCK = 13, DNS = 14;
 
     private AppMenu() {
     }
@@ -111,6 +111,7 @@ final class AppMenu {
         adSw.setFocusable(false);
         ad.addView(adSw, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+        item(a, d, panel, Glyph.GLOBE, false, "DNS de bloqueio", act, DNS);
         LinearLayout desk = item(a, d, panel, Glyph.DESKTOP, desktopOn, "Modo computador", act, DESKTOP);
         Switch sw = new Switch(a);
         sw.setChecked(desktopOn);
