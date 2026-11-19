@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema escuro só para o contexto do WebView: faz os sites seguirem o tema escuro do app. -->
+    <style name="ArbeonWebDark" parent="android:Theme.Material.NoActionBar" />
+</resources>

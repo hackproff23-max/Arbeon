@@ -15,9 +15,11 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -652,7 +654,7 @@ public class MainActivity extends Activity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private WebView createWebView(final Tab t) {
-        WebView w = new WebView(this);
+        WebView w = new WebView(Fx.dark ? new ContextThemeWrapper(this, R.style.ArbeonWebDark) : this);
         WebSettings s = w.getSettings();
         if (defaultUA == null) defaultUA = s.getUserAgentString();
         s.setDomStorageEnabled(true);
@@ -781,6 +783,12 @@ public class MainActivity extends Activity {
         WebSettings s = w.getSettings();
         s.setJavaScriptEnabled(prefs.getBoolean("js", true));
         WebPrefs.apply(this, w);
+        // sites seguem o tema escuro do app (sites com tema escuro próprio usam o deles)
+        if (Build.VERSION.SDK_INT >= 33) {
+            s.setAlgorithmicDarkeningAllowed(Fx.dark);
+        } else if (Build.VERSION.SDK_INT >= 29) {
+            s.setForceDark(Fx.dark ? WebSettings.FORCE_DARK_ON : WebSettings.FORCE_DARK_OFF);
+        }
         s.setUserAgentString(prefs.getBoolean("desktop", false) ? DESKTOP_UA : defaultUA);
     }
 
