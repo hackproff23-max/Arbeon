@@ -334,9 +334,9 @@ final class DlConfirm {
             float w = getWidth(), h = getHeight(), d = dens(this);
             float cx = w / 2f, cy = h / 2f, r = Math.min(w, h) / 2f;
             p.setStyle(Paint.Style.FILL);
-            p.setColor(0xFF0B0E1A);
+            p.setColor(Fx.NAVY);
             c.drawCircle(cx, cy, r, p);
-            p.setColor(Color.WHITE);
+            p.setColor(Fx.WHITE);
             p.setStrokeWidth(2.6f * d);
             float k = r * 0.38f;
             c.drawLine(cx - k, cy - k, cx + k, cy + k, p);
@@ -369,6 +369,33 @@ final class DlConfirm {
         }
     }
 
+    /** Ícone de elo de corrente, do botão "Atualizar link". */
+    private static class LinkIcon extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF r = new RectF();
+
+        LinkIcon(Context c) {
+            super(c);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        @Override
+        protected void onDraw(Canvas c) {
+            float u = Math.min(getWidth(), getHeight()) / 30f;
+            float cx = getWidth() / 2f, cy = getHeight() / 2f;
+            p.setColor(Fx.NAVY);
+            p.setStrokeWidth(3f * u);
+            c.save();
+            c.rotate(-45, cx, cy);
+            r.set(cx - 13 * u, cy - 5.5f * u, cx + 3 * u, cy + 5.5f * u);
+            c.drawRoundRect(r, 5.5f * u, 5.5f * u, p);
+            r.set(cx - 3 * u, cy - 5.5f * u, cx + 13 * u, cy + 5.5f * u);
+            c.drawRoundRect(r, 5.5f * u, 5.5f * u, p);
+            c.restore();
+        }
+    }
+
     // ------------------------------------------------------------------ janela
 
     private static String extOf(String name) {
@@ -378,7 +405,16 @@ final class DlConfirm {
         return e.length() > 4 ? e.substring(0, 4) : e;
     }
 
-    static void show(final Activity a, String name, long len, boolean again, final Runnable onYes) {
+    static void show(Activity a, String name, long len, boolean again, Runnable onYes) {
+        show(a, name, len, again, onYes, null);
+    }
+
+    /**
+     * again + onUpdate != null: download já existe, a janela oferece "Atualizar link" e "Baixar novamente".
+     */
+    static void show(final Activity a, String name, long len, boolean again, final Runnable onYes,
+                     final Runnable onUpdate) {
+        final boolean choose = again && onUpdate != null;
         final Dialog d = new Dialog(a, android.R.style.Theme_Material_Dialog_NoActionBar);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -411,7 +447,7 @@ final class DlConfirm {
         Fx.glow(badge, 6);
         row.addView(badge, new LinearLayout.LayoutParams(dp(a, 64), dp(a, 64)));
         TextView title = new TextView(a);
-        title.setText(again ? "Baixar o arquivo novamente?" : "Baixar o arquivo?");
+        title.setText(choose ? "Esse download já existe" : (again ? "Baixar o arquivo novamente?" : "Baixar o arquivo?"));
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(Fx.NAVY);
@@ -451,13 +487,14 @@ final class DlConfirm {
         info.setGravity(Gravity.CENTER_VERTICAL);
         info.addView(new FileIcon(a, extOf(name)), new LinearLayout.LayoutParams(dp(a, 56), dp(a, 68)));
         TextView msg = new TextView(a);
-        SpannableStringBuilder sb = new SpannableStringBuilder("Quer baixar ");
+        SpannableStringBuilder sb = new SpannableStringBuilder(choose ? "" : "Quer baixar ");
         int s0 = sb.length();
         sb.append(name);
-        sb.setSpan(new ForegroundColorSpan(0xFF1A5FE8), s0, sb.length(), 0);
+        sb.setSpan(new ForegroundColorSpan(Fx.ACCENT), s0, sb.length(), 0);
         sb.setSpan(new UnderlineSpan(), s0, sb.length(), 0);
         if (len > 0) sb.append(" (").append(sizePt(len)).append(")");
-        sb.append(again ? " novamente?" : "?");
+        sb.append(choose ? " já está nos downloads. Atualizar o link ou baixar novamente?"
+                : (again ? " novamente?" : "?"));
         msg.setText(sb);
         msg.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         msg.setTextColor(Fx.NAVY);
@@ -488,11 +525,14 @@ final class DlConfirm {
         cancel.setBackground(cg);
         Fx.glow(cancel, 4);
         cancel.setClickable(true);
-        cancel.setOnClickListener(v -> d.dismiss());
-        cancel.addView(new XDot(a), new LinearLayout.LayoutParams(dp(a, 30), dp(a, 30)));
+        cancel.setOnClickListener(v -> {
+            d.dismiss();
+            if (choose && onUpdate != null) onUpdate.run();
+        });
+        cancel.addView(choose ? new LinkIcon(a) : new XDot(a), new LinearLayout.LayoutParams(dp(a, 30), dp(a, 30)));
         TextView ct = new TextView(a);
-        ct.setText("Cancelar");
-        ct.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        ct.setText(choose ? "Atualizar link" : "Cancelar");
+        ct.setTextSize(TypedValue.COMPLEX_UNIT_SP, choose ? 15 : 18);
         ct.setTypeface(Typeface.DEFAULT_BOLD);
         ct.setTextColor(Fx.NAVY);
         ct.setPadding(dp(a, 8), 0, 0, 0);
@@ -517,8 +557,8 @@ final class DlConfirm {
         gc.setPadding(dp(a, 10), 0, dp(a, 10), 0);
         gc.addView(new DlArrow(a), new LinearLayout.LayoutParams(dp(a, 30), dp(a, 30)));
         TextView gt = new TextView(a);
-        gt.setText(again ? "Fazer o download novamente" : "Fazer o download");
-        gt.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        gt.setText(choose ? "Baixar novamente" : (again ? "Fazer o download novamente" : "Fazer o download"));
+        gt.setTextSize(TypedValue.COMPLEX_UNIT_SP, choose ? 15 : 16);
         gt.setTypeface(Typeface.DEFAULT_BOLD);
         gt.setTextColor(Color.WHITE);
         gt.setGravity(Gravity.CENTER);
@@ -530,7 +570,7 @@ final class DlConfirm {
             d.dismiss();
             if (onYes != null) onYes.run();
         });
-        btns.addView(go, new LinearLayout.LayoutParams(0, dp(a, 62), 1.25f));
+        btns.addView(go, new LinearLayout.LayoutParams(0, dp(a, 62), choose ? 1f : 1.25f));
         body.addView(btns);
 
         d.setContentView(wrap);

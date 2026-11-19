@@ -88,21 +88,30 @@ final class DownloadsUi {
             return;
         }
         final String name = URLUtil.guessFileName(url, cd, mime);
-        boolean again = false;
+        DlItem found = null;
         try {
             for (DlItem it : DownloadEngine.get(a).items) {
                 if (url.equals(it.url) || name.equals(it.fileName)) {
-                    again = true;
+                    found = it;
                     break;
                 }
             }
         } catch (Exception ignored) {
         }
-        DlConfirm.show(a, name, len, again, () -> {
+        final DlItem existing = found;
+        final Runnable add = () -> {
             askPermissions(a);
             DownloadEngine.get(a).add(url, ua, null, mime, name);
             ArbeonUi.toast(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra");
-        });
+        };
+        if (existing == null) {
+            DlConfirm.show(a, name, len, false, add, null);
+        } else {
+            DlConfirm.show(a, name, len, true, add, () -> {
+                DownloadEngine.get(a).updateLink(existing, url);
+                ArbeonUi.toast(a, "Link atualizado");
+            });
+        }
     }
 
     private static void askPermissions(Activity a) {
