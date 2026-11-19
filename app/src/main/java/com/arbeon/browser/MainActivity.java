@@ -1046,9 +1046,10 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             String[] lists = {"PSV_GAMES", "PSV_DLCS", "PSV_DEMOS", "PSV_THEMES", "PSM_GAMES",
                     "PSX_GAMES", "PSP_GAMES", "PSP_DLCS"};
-            String pkg = null, zrif = null, status = null;
+            String pkg = null, zrif = null;
+            final StringBuilder log = new StringBuilder();
             for (String name : lists) {
-                String[] r = findInList("https://nopaystation.com/tsv/" + name + ".tsv", pid, ua);
+                String[] r = findInList("https://nopaystation.com/tsv/" + name + ".tsv", pid, ua, log);
                 if (r == null) continue;
                 pkg = r[0];
                 zrif = r[1];
@@ -1070,21 +1071,43 @@ public class MainActivity extends Activity {
                 } else if (fPkg != null) {
                     toast("Este item não tem link de download (" + fPkg + ")");
                 } else {
-                    externalFallback(view, u);
+                    psnsFailed(u, pid, log.toString());
                 }
             });
         }).start();
     }
 
+    private void psnsFailed(final String u, String pid, String log) {
+        new ArbeonDialog(this)
+                .setTitle("Download não encontrado")
+                .setMessage("Não achei o link do PKG de " + pid + " nem na página nem nas listas do NoPayStation.\n\n"
+                        + "Detalhes (v2):\n" + (log.isEmpty() ? "ID não existe nas listas consultadas." : log))
+                .setPositiveButton("Copiar detalhes", (d, w) -> {
+                    try {
+                        android.content.ClipboardManager cm =
+                                (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("psns", u + "\n" + log));
+                        toast("Copiado");
+                    } catch (Exception ignored) {
+                    }
+                })
+                .setNegativeButton("Fechar", null)
+                .show();
+    }
+
     /** Lê um TSV do NoPayStation sem guardar tudo na memória; devolve {link do PKG, zRIF} ou null. */
-    private static String[] findInList(String url, String pid, String ua) {
+    private static String[] findInList(String url, String pid, String ua, StringBuilder log) {
         java.net.HttpURLConnection c = null;
         try {
             c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
             c.setConnectTimeout(15000);
             c.setReadTimeout(30000);
             c.setRequestProperty("User-Agent", ua);
-            if (c.getResponseCode() != 200) return null;
+            int code = c.getResponseCode();
+            if (code != 200) {
+                log.append(url.substring(url.lastIndexOf('/') + 1)).append(": HTTP ").append(code).append('\n');
+                return null;
+            }
             java.io.BufferedReader br = new java.io.BufferedReader(
                     new java.io.InputStreamReader(c.getInputStream(), "UTF-8"));
             String head = br.readLine();
@@ -1098,7 +1121,11 @@ public class MainActivity extends Activity {
                 else if (n.contains("pkg") && iPkg < 0) iPkg = i;
                 else if (n.contains("zrif") && iZ < 0) iZ = i;
             }
-            if (iPkg < 0) return null;
+            if (iPkg < 0) {
+                log.append(url.substring(url.lastIndexOf('/') + 1)).append(": colunas ")
+                        .append(head.length() > 120 ? head.substring(0, 120) : head).append('\n');
+                return null;
+            }
             String line;
             while ((line = br.readLine()) != null) {
                 if (!line.contains(pid)) continue;
@@ -1107,7 +1134,8 @@ public class MainActivity extends Activity {
                 if (iPkg >= f.length) continue;
                 return new String[]{f[iPkg].trim(), iZ >= 0 && iZ < f.length ? f[iZ].trim() : ""};
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.append(url.substring(url.lastIndexOf('/') + 1)).append(": ").append(e).append('\n');
         } finally {
             if (c != null) c.disconnect();
         }
