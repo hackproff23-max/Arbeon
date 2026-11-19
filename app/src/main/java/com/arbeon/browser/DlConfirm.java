@@ -57,11 +57,11 @@ final class DlConfirm {
     }
 
     /** Evita que um desenho "match_parent" estique o cabeçalho: só ocupa o espaço que o pai já definiu. */
-    private static void measureFill(View v, int wSpec, int hSpec) {
+    private static int[] fillSize(int wSpec, int hSpec) {
         int w = View.MeasureSpec.getSize(wSpec);
         int h = View.MeasureSpec.getMode(hSpec) == View.MeasureSpec.EXACTLY
                 ? View.MeasureSpec.getSize(hSpec) : 0;
-        v.setMeasuredDimension(w, h);
+        return new int[]{w, h};
     }
 
     private static float dens(View v) {
@@ -113,7 +113,8 @@ final class DlConfirm {
 
         @Override
         protected void onMeasure(int wSpec, int hSpec) {
-            measureFill(this, wSpec, hSpec);
+            int[] sz = fillSize(wSpec, hSpec);
+            setMeasuredDimension(sz[0], sz[1]);
         }
 
         @Override
@@ -308,7 +309,8 @@ final class DlConfirm {
 
         @Override
         protected void onMeasure(int wSpec, int hSpec) {
-            measureFill(this, wSpec, hSpec);
+            int[] sz = fillSize(wSpec, hSpec);
+            setMeasuredDimension(sz[0], sz[1]);
         }
 
         @Override
