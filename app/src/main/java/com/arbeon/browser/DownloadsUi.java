@@ -60,17 +60,19 @@ import java.util.Locale;
 
 /** Tela cheia de downloads (estilo "Transferências", visual azul/vidro) e entrada dos downloads vindos do navegador. */
 final class DownloadsUi {
-    private static final int BG = 0xFFF4F7FF;
-    private static final int BG2 = 0xFFE9EFFF;
-    private static final int INK = 0xFF1B1B1F;
-    private static final int NAVY = 0xFF0B1B4D;
-    private static final int SUB = 0xFF44474F;
-    private static final int LINE = 0xFFDADCE5;
-    private static final int CIRCLE = 0xFFECEEF6;
-    private static final int BLUE = 0xFF1A73E8;
-    private static final int ACCENT = 0xFF1457E8;
-    private static final int PILL = 0xFFE3E9FA;
+    // cores seguem o tema do app (claro/escuro/cor): ver sync()
+    private static int BG, BG2, INK, NAVY, SUB, CIRCLE, BLUE, ACCENT, PILL;
     private static final int RED = 0xFFD93025;
+
+    /** Lê as cores do tema atual antes de montar a tela. */
+    private static void sync() {
+        BG = Fx.SURFACE; BG2 = Fx.TOP2; INK = Fx.NAVY; NAVY = Fx.NAVY; SUB = Fx.MUTED;
+        CIRCLE = Fx.FACE; BLUE = Fx.ACCENT; ACCENT = Fx.ACCENT; PILL = Fx.CARD2;
+    }
+
+    static {
+        sync();
+    }
     private static final Locale PT = new Locale("pt", "BR");
     private static final String[] CHIPS = {"Todas", "Em andamento", "Imagens", "Vídeos", "Áudio", "Outro"};
     private static final int[] CHIP_ICON = {Ic.DB, Ic.ARROWDOWN, Ic.IMAGE, Ic.PLAY, Ic.NOTE, Ic.FOLDER};
@@ -375,7 +377,7 @@ final class DownloadsUi {
         protected void onDraw(Canvas c) {
             float w = getWidth(), h = getHeight();
             p.setStyle(Paint.Style.FILL);
-            p.setColor(0x331457E8);
+            p.setColor((ACCENT & 0x00FFFFFF) | 0x33000000);
             r.set(0, 0, w, h);
             c.drawRoundRect(r, h / 2f, h / 2f, p);
             if (frac > 0f) {
@@ -493,6 +495,7 @@ final class DownloadsUi {
     }
 
     static void show(final Activity a) {
+        sync();
         final DownloadEngine eng = DownloadEngine.get(a);
         final Handler h = new Handler(Looper.getMainLooper());
         final ArrayList<Row> rows = new ArrayList<>();
@@ -518,8 +521,10 @@ final class DownloadsUi {
         head.setClipChildren(false);
         head.setClipToPadding(false);
 
-        final TextView title = txt(a, "Transferências", 28, NAVY);
+        final TextView title = txt(a, "Transferências", 24, NAVY);
         title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setSingleLine(true);
+        title.setEllipsize(TextUtils.TruncateAt.END);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         final EditText search = new EditText(a);
@@ -564,9 +569,9 @@ final class DownloadsUi {
         Ic icClose = headerButton(a, Ic.CLOSE, v -> d.dismiss());
         Ic[] btns = {icGear, icSearch, icClose};
         for (Ic b : btns) {
-            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44));
-            bp.leftMargin = dp(a, 4);
-            bp.rightMargin = dp(a, 6);
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(dp(a, 40), dp(a, 40));
+            bp.leftMargin = dp(a, 2);
+            bp.rightMargin = dp(a, 4);
             head.addView(b, bp);
         }
         root.addView(head);
@@ -636,10 +641,10 @@ final class DownloadsUi {
                 GradientDrawable cb = new GradientDrawable();
                 cb.setCornerRadius(dp(a, 20));
                 if (sel) {
-                    cb.setColor(0xFFEAF1FF);
+                    cb.setColor(Fx.PRESS1);
                     cb.setStroke(dp(a, 2), ACCENT);
                 } else {
-                    cb.setColor(0xFFF7F9FF);
+                    cb.setColor(Fx.FIELD2);
                     cb.setStroke(dp(a, 1), Fx.TOP1);
                 }
                 chip.setBackground(cb);
@@ -729,8 +734,8 @@ final class DownloadsUi {
             w.setStatusBarColor(BG);
             w.setNavigationBarColor(BG2);
             int vis = 0;
-            if (Build.VERSION.SDK_INT >= 23) vis |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            if (Build.VERSION.SDK_INT >= 26) vis |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            if (!Fx.dark && Build.VERSION.SDK_INT >= 23) vis |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (!Fx.dark && Build.VERSION.SDK_INT >= 26) vis |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
             w.getDecorView().setSystemUiVisibility(vis);
         }
         d.setOnDismissListener(x -> h.removeCallbacks(refresh[0]));
@@ -752,7 +757,7 @@ final class DownloadsUi {
         r.box.setBackground(Fx.button(a, false)); Fx.glow(r.box, 3);
         r.box.setClickable(true);
 
-        r.icon = new Ic(a, Ic.FILE, 0xFF2B2D33, 20);
+        r.icon = new Ic(a, Ic.FILE, Fx.TEXT2, 20);
         GradientDrawable oval = new GradientDrawable();
         oval.setShape(GradientDrawable.OVAL);
         oval.setColor(CIRCLE);
@@ -779,7 +784,7 @@ final class DownloadsUi {
         cl.leftMargin = dp(a, 16);
         r.box.addView(col, cl);
 
-        final Ic dots = iconButton(a, Ic.DOTS, 0xFF2B2D33, null);
+        final Ic dots = iconButton(a, Ic.DOTS, Fx.TEXT2, null);
         dots.setOnClickListener(v -> itemMenu(a, eng, it, dots));
         r.box.addView(dots, new LinearLayout.LayoutParams(dp(a, 44), dp(a, 44)));
 
@@ -893,7 +898,7 @@ final class DownloadsUi {
         }
         r.sub.setTextColor(color);
         r.sub.setText(text);
-        r.icon.setColor(st == DlItem.RUNNING ? BLUE : (st == DlItem.FAILED ? RED : 0xFF2B2D33));
+        r.icon.setColor(st == DlItem.RUNNING ? BLUE : (st == DlItem.FAILED ? RED : Fx.TEXT2));
 
         if (st == DlItem.DONE) {
             r.bar.setVisibility(View.GONE);
