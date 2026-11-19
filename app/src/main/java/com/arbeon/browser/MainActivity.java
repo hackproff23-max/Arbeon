@@ -1020,12 +1020,98 @@ public class MainActivity extends Activity {
                     DownloadsUi.onDownloadRequested(MainActivity.this, found,
                             view.getSettings().getUserAgentString(), null, null, -1, view.getUrl());
                 } else {
-                    externalFallback(view, u);
+                    psnsFromList(view, u);
                 }
             });
         } catch (Exception e) {
-            externalFallback(view, u);
+            psnsFromList(view, u);
         }
+    }
+
+    /** Plano B: procura o Content ID nas listas TSV públicas do NoPayStation e baixa o PKG direto. */
+    private void psnsFromList(final WebView view, final String u) {
+        String q = null;
+        try {
+            q = Uri.parse(u).getQueryParameter("product");
+        } catch (Exception ignored) {
+        }
+        final String pid = q == null ? "" : q.trim();
+        if (pid.isEmpty()) {
+            externalFallback(view, u);
+            return;
+        }
+        toast("Procurando o download…");
+        final String ua = view.getSettings().getUserAgentString();
+        final String page = view.getUrl();
+        new Thread(() -> {
+            String[] lists = {"PSV_GAMES", "PSV_DLCS", "PSV_DEMOS", "PSV_THEMES", "PSM_GAMES",
+                    "PSX_GAMES", "PSP_GAMES", "PSP_DLCS"};
+            String pkg = null, zrif = null, status = null;
+            for (String name : lists) {
+                String[] r = findInList("https://nopaystation.com/tsv/" + name + ".tsv", pid, ua);
+                if (r == null) continue;
+                pkg = r[0];
+                zrif = r[1];
+                break;
+            }
+            final String fPkg = pkg, fZrif = zrif;
+            runOnUiThread(() -> {
+                if (fPkg != null && (fPkg.startsWith("http://") || fPkg.startsWith("https://"))) {
+                    if (fZrif != null && fZrif.length() > 20 && !fZrif.equalsIgnoreCase("MISSING")
+                            && !fZrif.equalsIgnoreCase("NOT REQUIRED")) {
+                        try {
+                            android.content.ClipboardManager cm =
+                                    (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("zRIF", fZrif));
+                        } catch (Exception ignored) {
+                        }
+                    }
+                    DownloadsUi.onDownloadRequested(MainActivity.this, fPkg, ua, null, null, -1, page);
+                } else if (fPkg != null) {
+                    toast("Este item não tem link de download (" + fPkg + ")");
+                } else {
+                    externalFallback(view, u);
+                }
+            });
+        }).start();
+    }
+
+    /** Lê um TSV do NoPayStation sem guardar tudo na memória; devolve {link do PKG, zRIF} ou null. */
+    private static String[] findInList(String url, String pid, String ua) {
+        java.net.HttpURLConnection c = null;
+        try {
+            c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+            c.setConnectTimeout(15000);
+            c.setReadTimeout(30000);
+            c.setRequestProperty("User-Agent", ua);
+            if (c.getResponseCode() != 200) return null;
+            java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(c.getInputStream(), "UTF-8"));
+            String head = br.readLine();
+            if (head == null) return null;
+            if (head.startsWith("\uFEFF")) head = head.substring(1);
+            String[] cols = head.split("\t", -1);
+            int iId = -1, iPkg = -1, iZ = -1;
+            for (int i = 0; i < cols.length; i++) {
+                String n = cols[i].trim().toLowerCase(java.util.Locale.ROOT);
+                if (n.contains("content") && iId < 0) iId = i;
+                else if (n.contains("pkg") && iPkg < 0) iPkg = i;
+                else if (n.contains("zrif") && iZ < 0) iZ = i;
+            }
+            if (iPkg < 0) return null;
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (!line.contains(pid)) continue;
+                String[] f = line.split("\t", -1);
+                if (iId >= 0 && iId < f.length && !f[iId].trim().equalsIgnoreCase(pid)) continue;
+                if (iPkg >= f.length) continue;
+                return new String[]{f[iPkg].trim(), iZ >= 0 && iZ < f.length ? f[iZ].trim() : ""};
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (c != null) c.disconnect();
+        }
+        return null;
     }
 
     /** Link com esquema próprio que nenhum app abre: tenta intent:, usa a página de reserva ou mostra o link. */
