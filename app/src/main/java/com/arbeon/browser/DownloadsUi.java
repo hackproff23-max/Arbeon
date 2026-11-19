@@ -87,10 +87,22 @@ final class DownloadsUi {
             ArbeonUi.toast(a, "Este tipo de link não é suportado para download");
             return;
         }
-        askPermissions(a);
-        String name = URLUtil.guessFileName(url, cd, mime);
-        DownloadEngine.get(a).add(url, ua, null, mime, name);
-        ArbeonUi.toast(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra");
+        final String name = URLUtil.guessFileName(url, cd, mime);
+        boolean again = false;
+        try {
+            for (DlItem it : DownloadEngine.get(a).items) {
+                if (url.equals(it.url) || name.equals(it.fileName)) {
+                    again = true;
+                    break;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        DlConfirm.show(a, name, len, again, () -> {
+            askPermissions(a);
+            DownloadEngine.get(a).add(url, ua, null, mime, name);
+            ArbeonUi.toast(a, "Download adicionado: " + name + "\nToque na pasta ⬇ da barra");
+        });
     }
 
     private static void askPermissions(Activity a) {
