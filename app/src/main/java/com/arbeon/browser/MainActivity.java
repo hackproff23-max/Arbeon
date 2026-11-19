@@ -682,6 +682,10 @@ public class MainActivity extends Activity {
                         || u.startsWith("about:") || u.startsWith("file:")) {
                     return false;
                 }
+                if (u.startsWith("psns:")) {
+                    psnsDownload(view, u);
+                    return true;
+                }
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u)));
                 } catch (Exception e) {
@@ -978,6 +982,50 @@ public class MainActivity extends Activity {
         }
         updateNav();
         toast("Dados de navegação apagados");
+    }
+
+    /**
+     * Botão "Open In Vita" (psns:browse?product=...) do NoPayStation: nenhum app do celular abre esse
+     * esquema, então procura na própria linha da página o link de download do PKG e baixa por aqui.
+     */
+    private void psnsDownload(final WebView view, final String u) {
+        String pid = "";
+        try {
+            pid = Uri.parse(u).getQueryParameter("product");
+        } catch (Exception ignored) {
+        }
+        if (pid == null) pid = "";
+        String js = "(function(pid){try{"
+                + "var as=document.querySelectorAll('a[href]'),a=null,i;"
+                + "for(i=0;i<as.length;i++){var h=as[i].getAttribute('href')||'';"
+                + "if(h.indexOf('psns:')===0&&(!pid||h.indexOf(pid)>=0)){a=as[i];break;}}"
+                + "var re=/https?:\\/\\/[^\"'\\s<>\\\\]+?\\.pkg[^\"'\\s<>\\\\]*/i;"
+                + "var n=a,k;"
+                + "for(k=0;k<8&&n;k++){n=n.parentElement;if(!n)break;"
+                + "var l=n.querySelectorAll('a[href]'),j;"
+                + "for(j=0;j<l.length;j++){var x=l[j].href||'';"
+                + "if(/^https?:/i.test(x)&&(/\\.pkg(\\?|$)/i.test(x)||/playstation\\.net/i.test(x)))return x;}"
+                + "var m=re.exec(n.outerHTML);if(m)return m[0];}"
+                + "return '';}catch(e){return '';}})(" + org.json.JSONObject.quote(pid) + ")";
+        try {
+            view.evaluateJavascript(js, value -> {
+                String found = "";
+                try {
+                    if (value != null && !value.equals("null")) {
+                        found = new JSONArray("[" + value + "]").getString(0);
+                    }
+                } catch (Exception ignored) {
+                }
+                if (found.startsWith("http://") || found.startsWith("https://")) {
+                    DownloadsUi.onDownloadRequested(MainActivity.this, found,
+                            view.getSettings().getUserAgentString(), null, null, -1, view.getUrl());
+                } else {
+                    externalFallback(view, u);
+                }
+            });
+        } catch (Exception e) {
+            externalFallback(view, u);
+        }
     }
 
     /** Link com esquema próprio que nenhum app abre: tenta intent:, usa a página de reserva ou mostra o link. */
