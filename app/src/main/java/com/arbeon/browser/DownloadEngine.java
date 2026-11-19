@@ -280,6 +280,7 @@ class DownloadEngine {
                 it.force = true;
                 clearAlert(it);
             }
+            if (it.state == DlItem.PAUSED && !it.removeAfter) notifyPaused(it);
             it.stop = false;
             save();
             schedule();
@@ -766,6 +767,57 @@ class DownloadEngine {
                 Icon.createWithResource(ctx, R.drawable.ic_stat_cancel), "Cancelar", pi).build();
     }
 
+    private Notification.Action pauseAction(DlItem it) {
+        Intent i = new Intent(ctx, DlActionReceiver.class)
+                .setAction(DlActionReceiver.PAUSE)
+                .putExtra("id", it.id);
+        PendingIntent pi = PendingIntent.getBroadcast(ctx, nid(it), i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return new Notification.Action.Builder(
+                Icon.createWithResource(ctx, R.drawable.ic_stat_pause), "Pausar", pi).build();
+    }
+
+    private Notification.Action resumeAction(DlItem it) {
+        Intent i = new Intent(ctx, DlActionReceiver.class)
+                .setAction(DlActionReceiver.RESUME)
+                .putExtra("id", it.id);
+        PendingIntent pi = PendingIntent.getBroadcast(ctx, nid(it), i,
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        return new Notification.Action.Builder(
+                Icon.createWithResource(ctx, R.drawable.ic_stat_play), "Continuar", pi).build();
+    }
+
+    /** Download pausado: a notificação continua na gaveta com a barra parada, Continuar e Cancelar. */
+    private void notifyPaused(final DlItem it) {
+        main.post(() -> {
+            try {
+                if (it.state != DlItem.PAUSED) return;
+                long done = it.done(), total = it.total;
+                boolean known = total > 0;
+                int pct = known ? (int) Math.min(100, done * 100 / total) : 0;
+                String sizes = known
+                        ? Formatter.formatFileSize(ctx, done) + " / " + Formatter.formatFileSize(ctx, total)
+                        : Formatter.formatFileSize(ctx, done);
+                Notification.Builder b = builder(CHANNEL)
+                        .setSmallIcon(R.drawable.ic_stat_pause)
+                        .setColor(BLUE)
+                        .setContentTitle(it.fileName)
+                        .setContentText(known ? "Pausado \u2022 " + pct + "%" : "Pausado")
+                        .setSubText(sizes)
+                        .setOngoing(false)
+                        .setOnlyAlertOnce(true)
+                        .setShowWhen(false)
+                        .setCategory(Notification.CATEGORY_PROGRESS)
+                        .setContentIntent(openApp(1))
+                        .addAction(resumeAction(it))
+                        .addAction(cancelAction(it));
+                if (known) b.setProgress(100, pct, false);
+                nm().notify(rid(it), b.build());
+            } catch (Exception ignored) {
+            }
+        });
+    }
+
     private static String clock(long secs) {
         if (secs < 0) secs = 0;
         long h = secs / 3600, m = (secs % 3600) / 60, s = secs % 60;
@@ -806,6 +858,7 @@ class DownloadEngine {
                 .setShowWhen(false)
                 .setCategory(Notification.CATEGORY_PROGRESS)
                 .setContentIntent(openApp(1))
+                .addAction(pauseAction(it))
                 .addAction(cancelAction(it));
         if (Build.VERSION.SDK_INT >= 31) {
             b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
